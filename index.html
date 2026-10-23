@@ -48,6 +48,7 @@
             font-size: 15px;
         }
         .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
             width: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
@@ -103,9 +104,9 @@
                 <!-- JS will inject category buttons here -->
             </div>
 
-            <!-- Treatment List Cards -->
-            <div class="grid grid-cols-1 gap-4" id="procedureCardsContainer">
-                <!-- JS will inject procedure cards here -->
+            <!-- Treatment List Cards (Grouped by Categories in 2 Columns) -->
+            <div class="space-y-6" id="procedureCardsContainer">
+                <!-- JS will inject categorized procedure cards here -->
             </div>
         </section>
 
@@ -158,7 +159,7 @@
                 </p>
 
                 <!-- Action Button -->
-                <button onclick="generateSummaryModal()" id="checkoutBtn" disabled class="w-full mt-4 bg-muji-matcha hover:bg-muji-matchaDark disabled:bg-slate-200 disabled:text-slate-400 text-white font-medium py-3.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2 text-sm md:text-base">
+                <button onclick="generateSummaryModal()" id="checkoutBtn" disabled class="w-full mt-4 bg-muji-matcha hover:bg-muji-matchaDark disabled:bg-slate-200 disabled:text-slate-400 text-white font-medium py-3.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2 text-sm md:text-base cursor-pointer disabled:cursor-not-allowed">
                     <i class="fa-solid fa-camera"></i>
                     <span>สรุปรายการ (แคปรูปส่ง LINE)</span>
                 </button>
@@ -270,7 +271,7 @@
                 minUnitPrice: 19.4,
                 hasOldPatientRate: true,
                 oldPatientNote: 'สิทธิ์ราคาคนไข้เก่า 9,700 THB / 500 shots',
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784140/Screenshot_2026-10-24_023130.png', // <-- แก้ไขตรงนี้
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784140/Screenshot_2026-10-24_023130.png',
                 description: '100 shots: 2,800 | 200 shots: 5,200 | 300 shots: 7,500 | 400 shots: 9,600 | 500 shots: 9,990 THB'
             },
             // BOTULINUM TOXIN
@@ -280,6 +281,7 @@
                 category: 'Botox',
                 unit: 'units',
                 basePrice: 3990,
+                baseQty: 50,
                 minUnitPrice: 70,
                 hasOldPatientRate: true,
                 oldPatientNote: 'สิทธิ์ราคาคนไข้เก่า (50 units: 3,500 | 100 units: 6,890 THB)',
@@ -292,33 +294,119 @@
                 category: 'Botox',
                 unit: 'units',
                 basePrice: 8000,
+                baseQty: 50,
                 minUnitPrice: 120,
                 hasOldPatientRate: true,
                 oldPatientNote: 'สิทธิ์ราคาคนไข้เก่า (50 units: 6,000 | 100 units: 12,000 THB)',
                 image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023247.png',
                 description: '50 units: 8,000 | 100 units: 14,900 THB'
             },
-			            {
+            {
                 id: 'botox-nabota',
                 name: 'Botulinum Toxin: Nabota®',
                 category: 'Botox',
                 unit: 'units',
-                basePrice: 87.8,
+                basePrice: 4390,
+                baseQty: 50,
                 minUnitPrice: 78.9,
                 hasOldPatientRate: false,
                 image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023239.png',
                 description: '50 units: 4,390 | 100 units: 7,890 (ไม่เข้าร่วมราคาคนไข้เก่าและโปรอื่นๆ)'
             },
-			            {
+            {
                 id: 'botox-allergan',
                 name: 'Botulinum Toxin: Allergan®',
                 category: 'Botox',
                 unit: 'units',
-                basePrice: 197.8,
+                basePrice: 9890,
+                baseQty: 50,
                 minUnitPrice: 179,
                 hasOldPatientRate: false,
                 image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023242.png',
                 description: '50 units: 9,890 | 100 units: 14,900 (ไม่เข้าร่วมราคาคนไข้เก่าและโปรอื่นๆ)'
+            },
+			            // SKIN GLOW & BRIGHT
+            {
+                id: 'skin-blink',
+                name: 'Blink',
+                category: 'SKIN',
+                unit: 'cc',
+                basePrice: 890,
+                minUnitPrice: 500,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023252.png',
+                description: '1 cc: 890 THB (5 cc: 3,500 THB) | เซ็ตจับคู่ CO2 + Blink 3 cc: 1,500 THB'
+            },
+            {
+                id: 'skin-max',
+                name: 'MAX',
+                category: 'SKIN',
+                unit: 'ครั้ง',
+                basePrice: 1800,
+                minUnitPrice: 1566,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023254.png',
+                description: '1 ครั้ง: 1,800 THB (3 ครั้ง: 4,700 THB)'
+            },
+            {
+                id: 'skin-hiyan',
+                name: 'Hiyan',
+                category: 'SKIN',
+                unit: 'ขวด',
+                basePrice: 2390,
+                minUnitPrice: 1963,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023257.png',
+                description: '1 ขวด: 2,390 THB (3 ขวด: 5,890 THB)'
+            },
+            {
+                id: 'skin-glossy',
+                name: 'Glossy',
+                category: 'SKIN',
+                unit: 'cc',
+                basePrice: 1750,
+                minUnitPrice: 1190,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023302.png',
+                description: '1 cc: 1,750 | 5 cc: 6,690 | 10 cc: 11,900 THB'
+            },
+            {
+                id: 'vitaran',
+                name: 'MESO: 2% PN Vitaran',
+                category: 'SKIN',
+                unit: 'cc',
+                basePrice: 4000,
+                minUnitPrice: 2500,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023404.png',
+                description: '1 cc: 4,000 | 2 cc: 6,000 | 4 cc: 9,999 THB'
+            },
+			
+            // LASER & SKIN TREATMENT
+            {
+                id: 'laser-yag',
+                name: 'QS Nd:YAG (เลเซอร์หน้าใส)',
+                category: 'LASER',
+                unit: 'ครั้ง',
+                basePrice: 3000,
+                minUnitPrice: 2600,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023436.png',
+                description: '1 ครั้ง: 3,000 | 5 ครั้ง: 14,000 | 10 ครั้ง: 26,000 THB'
+            },
+            {
+                id: 'co2-full',
+                name: 'Fractional CO2 LASER (ทั่วหน้า)',
+                category: 'LASER',
+                unit: 'ครั้ง',
+                basePrice: 8000,
+                minUnitPrice: 4000,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023422.png',
+                description: '1 ครั้ง: 6,000 THB (จากปกติ 8,000) | จัดเซ็ตคู่ Blink 3 ครั้ง เหลือ 4,000 THB / จัดเซ็ตคู่ Glossy เพียง 4,000 THB'
+            },
+            {
+                id: 'acne-program',
+                name: 'Acne Clear Treatment',
+                category: 'Acne',
+                unit: 'ครั้ง',
+                basePrice: 1090,
+                minUnitPrice: 890,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023422.png',
+                description: '1 ครั้ง: 1,090 | 5 ครั้ง: 4,950 | 10 ครั้ง: 8,900 THB'
             },
             // FILLER
             {
@@ -328,7 +416,7 @@
                 unit: 'cc',
                 basePrice: 4900,
                 minUnitPrice: 3900,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784140/Screenshot_2026-10-24_023218.png', // <-- แก้ไขตรงนี้
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784140/Screenshot_2026-10-24_023218.png',
                 description: '1 cc: 4,900 THB (ลดเหลือ 3,900 THB / cc เมื่อซื้อ ≥ 3 cc)'
             },
             {
@@ -373,89 +461,6 @@
                 description: '1 cc: 1,000 THB'
             },
 
-            // BIOSTIMULATOR & REJUVENATION
-            {
-                id: 'sculptra',
-                name: 'Sculptra®',
-                category: 'Biostimulator',
-                unit: 'vial',
-                basePrice: 25000,
-                minUnitPrice: 22666,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023309.png',
-                description: '1 vial: 25,000 THB (3 vials: 68,000 THB)'
-            },
-            {
-                id: 'radiesse',
-                name: 'Radiesse®',
-                category: 'Biostimulator',
-                unit: 'vial',
-                basePrice: 32000,
-                minUnitPrice: 30000,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023312.png',
-                description: '1 vial: 32,000 THB (2 vials: 60,000 THB)'
-            },
-            {
-                id: 'juvelook',
-                name: 'Juvelook®',
-                category: 'Biostimulator',
-                unit: 'vial',
-                basePrice: 15900,
-                minUnitPrice: 14500,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023315.png',
-                description: '1 vial: 15,900 THB (2 vials: 29,000 THB)'
-            },
-
-            // SKIN GLOW & BRIGHT
-            {
-                id: 'skin-blink',
-                name: 'Blink Skin',
-                category: 'Skin Glow & Bright',
-                unit: 'ครั้ง',
-                basePrice: 890,
-                minUnitPrice: 700,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023252.png',
-                description: '1 ครั้ง: 890 THB (5 ครั้ง: 3,500 THB)'
-            },
-            {
-                id: 'skin-max',
-                name: 'MAX Rejuvenation',
-                category: 'Skin Glow & Bright',
-                unit: 'ครั้ง',
-                basePrice: 1800,
-                minUnitPrice: 1566,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023254.png',
-                description: '1 ครั้ง: 1,800 THB (3 ครั้ง: 4,700 THB)'
-            },
-            {
-                id: 'skin-hiyan',
-                name: 'Hiyan Hydration',
-                category: 'Skin Glow & Bright',
-                unit: 'ครั้ง',
-                basePrice: 2390,
-                minUnitPrice: 1963,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023257.png',
-                description: '1 ครั้ง: 2,390 THB (3 ครั้ง: 5,890 THB)'
-            },
-            {
-                id: 'skin-glossy',
-                name: 'Glossy',
-                category: 'Skin Glow & Bright',
-                unit: 'ครั้ง',
-                basePrice: 1750,
-                minUnitPrice: 1190,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784141/Screenshot_2026-10-24_023302.png',
-                description: '1 ครั้ง: 1,750 | 5 ครั้ง: 6,690 | 10 ครั้ง: 11,900 THB'
-            },
-            {
-                id: 'vitaran',
-                name: 'MESO: 2% PN Vitaran',
-                category: 'Skin Glow & Bright',
-                unit: 'ครั้ง',
-                basePrice: 4000,
-                minUnitPrice: 2500,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023404.png',
-                description: '1 ครั้ง: 4,000 | 2 ครั้ง: 6,000 | 4 ครั้ง: 9,999 THB'
-            },
 
             // FAT
             {
@@ -490,39 +495,38 @@
                 image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784591/Screenshot_2026-10-24_024250.png',
                 description: '1 ครั้ง: 2,550 | 3 ครั้ง: 7,200 | 10 ครั้ง: 21,000 THB (ลด 15% เมื่อทำคู่หัตถการอื่น)'
             },
-
-            // LASER & SKIN TREATMENT
-
+			            // BIOSTIMULATOR & REJUVENATION
             {
-                id: 'laser-yag',
-                name: 'QS Nd:YAG (เลเซอร์หน้าใส)',
-                category: 'LASER',
-                unit: 'ครั้ง',
-                basePrice: 3000,
-                minUnitPrice: 2600,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023436.png',
-                description: '1 ครั้ง: 3,000 | 5 ครั้ง: 14,000 | 10 ครั้ง: 26,000 THB'
+                id: 'sculptra',
+                name: 'Sculptra®',
+                category: 'Biostimulator',
+                unit: 'vial',
+                basePrice: 25000,
+                minUnitPrice: 22666,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023309.png',
+                description: '1 vial: 25,000 THB (3 vials: 68,000 THB)'
             },
             {
-                id: 'co2-full',
-                name: 'Fractional CO2 LASER (ทั่วหน้า)',
-                category: 'LASER',
-                unit: 'ครั้ง',
-                basePrice: 4500,
-                minUnitPrice: 4000,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023422.png',
-                description: '1 ครั้ง: 4,500 THB (จัดเซ็ตคู่ Glossy เพียง 4,000 THB)'
+                id: 'radiesse',
+                name: 'Radiesse®',
+                category: 'Biostimulator',
+                unit: 'vial',
+                basePrice: 32000,
+                minUnitPrice: 30000,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023312.png',
+                description: '1 vial: 32,000 THB (2 vials: 60,000 THB)'
             },
             {
-                id: 'acne-program',
-                name: 'Acne Clear Treatment',
-                category: 'Acne',
-                unit: 'ครั้ง',
-                basePrice: 1090,
-                minUnitPrice: 890,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023422.png',
-                description: '1 ครั้ง: 1,090 | 5 ครั้ง: 4,950 | 10 ครั้ง: 8,900 THB'
+                id: 'juvelook',
+                name: 'Juvelook®',
+                category: 'Biostimulator',
+                unit: 'vial',
+                basePrice: 15900,
+                minUnitPrice: 14500,
+                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023315.png',
+                description: '1 vial: 15,900 THB (2 vials: 29,000 THB)'
             }
+
         ];
 
         // App State
@@ -530,70 +534,98 @@
         let isOldPatientMap = {}; // { procedureId: boolean }
         let selectedCategory = 'All';
 
-        // Initialize UI on Load
-        window.onload = function() {
-            renderCategoryFilters();
-            renderProcedureCards();
-            updateCartUI();
-        };
-
         // Render Category Filter Tabs
-        function renderCategoryFilters() {
-            const categories = ['All', ...new Set(procedures.map(p => p.category))];
+        function renderCategories() {
             const container = document.getElementById('categoryContainer');
+            const categories = ['All', ...new Set(procedures.map(p => p.category))];
 
             container.innerHTML = categories.map(cat => `
-                <button onclick="setCategory('${cat}')" class="px-4 py-2 rounded-xl transition-all flex-shrink-0 font-medium ${selectedCategory === cat ? 'bg-muji-matcha text-white shadow-sm' : 'bg-white text-muji-dark border border-muji-200 hover:bg-muji-50'}">
+                <button onclick="selectCategory('${cat}')" class="px-3.5 py-1.5 rounded-full font-medium transition-all whitespace-nowrap cursor-pointer ${
+                    selectedCategory === cat 
+                    ? 'bg-muji-matcha text-white shadow-xs' 
+                    : 'bg-white text-muji-dark hover:bg-muji-100 border border-muji-200'
+                }">
                     ${cat === 'All' ? 'ทั้งหมด' : cat}
                 </button>
             `).join('');
         }
 
-        function setCategory(cat) {
+        function selectCategory(cat) {
             selectedCategory = cat;
-            renderCategoryFilters();
+            renderCategories();
             renderProcedureCards();
         }
 
-        // Render Procedures Cards
+        // Render Procedures Cards grouped by Category in 2 columns
         function renderProcedureCards() {
             const container = document.getElementById('procedureCardsContainer');
-            const filtered = selectedCategory === 'All' 
-                ? procedures 
-                : procedures.filter(p => p.category === selectedCategory);
+            
+            // Extract categories based on filter selection
+            const categoriesToDisplay = selectedCategory === 'All' 
+                ? [...new Set(procedures.map(p => p.category))] 
+                : [selectedCategory];
 
-            container.innerHTML = filtered.map(item => {
-                const qty = cart[item.id] || 0;
-                const isOld = isOldPatientMap[item.id] || false;
+            if (categoriesToDisplay.length === 0) {
+                container.innerHTML = `<p class="text-center text-muji-400 py-8">ไม่พบรายการหัตถการ</p>`;
+                return;
+            }
+
+            container.innerHTML = categoriesToDisplay.map(category => {
+                const categoryItems = procedures.filter(p => p.category === category);
+                if (categoryItems.length === 0) return '';
+
+                const cardsHtml = categoryItems.map(item => {
+                    const qty = cart[item.id] || 0;
+                    const isOld = isOldPatientMap[item.id] || false;
+                    const step = item.id === 'hifu' ? 100 : (item.category === 'Botox' ? 50 : 1);
+
+                    return `
+                        <div class="bg-white rounded-2xl p-4 border border-muji-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-full">
+                            <div class="space-y-3">
+                                <div class="relative overflow-hidden rounded-xl bg-muji-50 h-32 w-full">
+                                    <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/300x200/f5f0e6/3d3226?text=Clinic+Procedure'">
+                                    <span class="absolute top-2 left-2 text-[10px] font-semibold bg-white/90 backdrop-blur-xs text-muji-dark px-2.5 py-1 rounded-full shadow-xs">${item.unit}</span>
+                                </div>
+                                <div class="space-y-1">
+                                    <h4 class="font-bold text-muji-dark text-sm md:text-base leading-snug">${item.name}</h4>
+                                    <p class="text-xs text-muji-500 leading-relaxed">${item.description}</p>
+                                </div>
+                                
+                                ${item.hasOldPatientRate ? `
+                                    <div class="pt-1">
+                                        <label class="inline-flex items-center cursor-pointer text-xs text-muji-matchaDark font-medium bg-muji-matchaLight/60 p-1.5 rounded-lg w-full">
+                                            <input type="checkbox" onchange="toggleOldPatient('${item.id}')" ${isOld ? 'checked' : ''} class="rounded border-muji-300 text-muji-matcha focus:ring-muji-matcha mr-1.5 flex-shrink-0">
+                                            <span class="text-[11px] leading-tight">สิทธิ์คนไข้เก่า</span>
+                                        </label>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Quantity Selector Controls -->
+                            <div class="flex items-center justify-between pt-3 mt-3 border-t border-muji-100">
+                                <div class="space-y-0.5">
+                                    <span class="text-xs text-muji-400 font-medium">ราคาเริ่มต้น:</span>
+                                    <p class="text-xs font-bold text-muji-matcha">${item.basePrice.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQty ? item.baseQty + ' ' : ''}${item.unit}</span></p>
+                                </div>
+                                <div class="flex items-center bg-muji-50 border border-muji-200 rounded-xl p-1">
+                                    <button onclick="updateQty('${item.id}', -${step})" class="w-7 h-7 rounded-lg bg-white shadow-xs text-muji-dark hover:bg-muji-100 flex items-center justify-center font-bold text-xs transition-colors cursor-pointer">-</button>
+                                    <input type="number" value="${qty}" step="${step}" onchange="setQty('${item.id}', this.value)" class="w-12 text-center bg-transparent border-none text-xs font-semibold text-muji-dark focus:outline-none" min="0">
+                                    <button onclick="updateQty('${item.id}', ${step})" class="w-7 h-7 rounded-lg bg-white shadow-xs text-muji-dark hover:bg-muji-100 flex items-center justify-center font-bold text-xs transition-colors cursor-pointer">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
                 return `
-                    <div class="bg-white rounded-2xl p-4 border border-muji-200 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                        <img src="${item.image}" alt="${item.name}" class="w-full sm:w-24 h-24 object-cover rounded-xl flex-shrink-0">
-                        <div class="flex-grow space-y-1.5 w-full">
-                            <div class="flex items-center justify-between">
-                                <span class="text-[11px] font-semibold bg-muji-100 text-muji-600 px-2.5 py-0.5 rounded-full">${item.category}</span>
-                                <span class="text-xs text-muji-400">หน่วย: ${item.unit}</span>
-                            </div>
-                            <h4 class="font-bold text-muji-dark text-base leading-tight">${item.name}</h4>
-                            <p class="text-xs text-muji-500 leading-relaxed">${item.description}</p>
-                            
-                            ${item.hasOldPatientRate ? `
-                                <div class="pt-1 flex items-center space-x-2">
-                                    <label class="inline-flex items-center cursor-pointer text-xs text-muji-matchaDark font-medium">
-                                        <input type="checkbox" onchange="toggleOldPatient('${item.id}')" ${isOld ? 'checked' : ''} class="rounded border-muji-300 text-muji-matcha focus:ring-muji-matcha mr-1.5">
-                                        <span>ใช้สิทธิ์คนไข้เก่า (${item.oldPatientNote})</span>
-                                    </label>
-                                </div>
-                            ` : ''}
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-2 pb-1 border-b border-muji-200">
+                            <i class="fa-solid fa-leaf text-muji-matcha text-xs"></i>
+                            <h3 class="font-bold text-muji-dark text-base md:text-lg">${category}</h3>
+                            <span class="text-xs text-muji-400 font-normal">(${categoryItems.length} รายการ)</span>
                         </div>
-
-                        <!-- Quantity Selector Controls -->
-                        <div class="flex sm:flex-col items-center justify-between w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-muji-100 flex-shrink-0 gap-2">
-                            <div class="flex items-center bg-muji-50 border border-muji-200 rounded-xl p-1">
-                                <button onclick="updateQty('${item.id}', -1)" class="w-8 h-8 rounded-lg bg-white shadow-xs text-muji-dark hover:bg-muji-100 flex items-center justify-center font-bold text-sm transition-colors">-</button>
-                                <input type="number" value="${qty}" onchange="setQty('${item.id}', this.value)" class="w-12 text-center bg-transparent border-none text-sm font-semibold text-muji-dark focus:outline-none" min="0">
-                                <button onclick="updateQty('${item.id}', 1)" class="w-8 h-8 rounded-lg bg-white shadow-xs text-muji-dark hover:bg-muji-100 flex items-center justify-center font-bold text-sm transition-colors">+</button>
-                            </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            ${cardsHtml}
                         </div>
                     </div>
                 `;
@@ -627,6 +659,13 @@
             updateCartUI();
         }
 
+        // Remove single item from cart completely
+        function removeItem(id) {
+            delete cart[id];
+            renderProcedureCards();
+            updateCartUI();
+        }
+
         function resetCart() {
             cart = {};
             isOldPatientMap = {};
@@ -650,6 +689,8 @@
                 if (qty <= 0) return;
 
                 const item = procedures.find(p => p.id === id);
+                if (!item) return;
+
                 const isOld = isOldPatientMap[id] || false;
                 let normalItemSubtotal = 0;
                 let calculatedPrice = 0;
@@ -693,7 +734,7 @@
                     calculatedPrice = qty * rate;
                     if (qty >= 4) notes.push('โปรซื้อ ≥ 4 cc เหลือ 7,500 THB / cc');
                 }
-                else if (id === 'filler-saypha') {
+                else if (id === 'filler-definisse') {
                     normalItemSubtotal = qty * 14900;
                     let rate = (qty >= 2) ? 12000 : 14900;
                     calculatedPrice = qty * rate;
@@ -776,15 +817,15 @@
                         notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
                     }
                 }
-                else if (id === 'laser-ipl') {
-                    normalItemSubtotal = qty * 1250;
-                    calculatedPrice = (qty >= 5) ? (qty / 5) * 5000 : qty * 1250;
-                }
                 else if (id === 'laser-yag') {
                     normalItemSubtotal = qty * 3000;
                     if (qty >= 10) calculatedPrice = (qty / 10) * 26000;
                     else if (qty >= 5) calculatedPrice = (qty / 5) * 14000;
                     else calculatedPrice = qty * 3000;
+                }
+                else if (id === 'co2-full') {
+                    normalItemSubtotal = qty * 8000;
+                    calculatedPrice = qty * 6000;
                 }
                 else if (id === 'acne-program') {
                     normalItemSubtotal = qty * 1090;
@@ -813,7 +854,25 @@
             // SPECIAL CROSS-CATEGORY BUNDLE OVERRIDES
             const findItem = (id) => items.find(i => i.id === id);
 
-            if (cart['co2-full'] >= 1 && cart['skin-glossy'] >= 3) {
+            // BUNDLE 1: Fractional CO2 ทั่วหน้า (1) + Blink (3 cc) = 4,000 + 1,500
+            if (cart['co2-full'] >= 1 && cart['skin-blink'] >= 3) {
+                const co2 = findItem('co2-full');
+                const blink = findItem('skin-blink');
+                if (co2 && blink) {
+                    const bundleCount = Math.min(Math.floor(cart['co2-full']), Math.floor(cart['skin-blink'] / 3));
+                    co2.finalPrice = (bundleCount * 4000) + ((cart['co2-full'] - bundleCount) * 6000);
+                    
+                    const remBlink = cart['skin-blink'] - (bundleCount * 3);
+                    let remBlinkPrice = 0;
+                    if (remBlink >= 5) remBlinkPrice = (remBlink / 5) * 3500;
+                    else remBlinkPrice = remBlink * 890;
+
+                    blink.finalPrice = (bundleCount * 1500) + remBlinkPrice;
+                    appliedBundles.push(`Set Fractional CO2 ทั่วหน้า + Blink 3 cc (ราคาพิเศษ 4,000 + 1,500 THB)`);
+                }
+            }
+            // BUNDLE 2: Fractional CO2 ทั่วหน้า + Glossy 3 cc
+            else if (cart['co2-full'] >= 1 && cart['skin-glossy'] >= 3) {
                 const co2 = findItem('co2-full');
                 const glossy = findItem('skin-glossy');
                 if (co2 && glossy) {
@@ -867,17 +926,22 @@
             const { items, subtotal, grandTotal, totalDiscount, appliedBundles } = calculateCartDetails();
 
             let html = items.map(item => `
-                <div class="bg-muji-50 p-3 rounded-xl border border-muji-100 flex items-center justify-between text-xs md:text-sm">
-                    <div class="space-y-0.5">
+                <div class="bg-muji-50 p-3 rounded-xl border border-muji-100 flex items-center justify-between text-xs md:text-sm gap-2">
+                    <div class="space-y-0.5 flex-grow">
                         <h5 class="font-semibold text-muji-dark">${item.name}</h5>
                         <div class="flex items-center space-x-1.5 text-xs text-muji-500">
-                            <span>x ${item.qty} ${item.unit}</span>
+                            <span class="font-medium text-muji-dark bg-muji-200/50 px-2 py-0.5 rounded text-[11px]">x ${item.qty} ${item.unit}</span>
                             ${item.notes.length > 0 ? `<span class="text-muji-matchaDark font-medium bg-muji-matchaLight px-2 py-0.5 rounded text-[11px]">${item.notes.join(', ')}</span>` : ''}
                         </div>
                     </div>
-                    <div class="text-right">
-                        <p class="font-bold text-muji-dark">${item.finalPrice.toLocaleString()} ฿</p>
-                        ${item.finalPrice < item.normalSubtotal ? `<p class="text-xs text-muji-400 line-through">${item.normalSubtotal.toLocaleString()} ฿</p>` : ''}
+                    <div class="flex items-center space-x-2.5">
+                        <div class="text-right">
+                            <p class="font-bold text-muji-dark">${item.finalPrice.toLocaleString()} ฿</p>
+                            ${item.finalPrice < item.normalSubtotal ? `<p class="text-xs text-muji-400 line-through">${item.normalSubtotal.toLocaleString()} ฿</p>` : ''}
+                        </div>
+                        <button onclick="removeItem('${item.id}')" title="ลบรายการนี้" class="w-8 h-8 rounded-lg bg-white border border-muji-200 hover:border-rose-300 text-muji-400 hover:text-rose-500 transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer">
+                            <i class="fa-regular fa-trash-can text-xs"></i>
+                        </button>
                     </div>
                 </div>
             `).join('');
@@ -913,7 +977,7 @@
                 <div class="flex justify-between items-start text-muji-dark">
                     <div>
                         <p class="font-medium leading-snug text-xs md:text-sm">${item.name}</p>
-                        <p class="text-xs text-muji-400">จำนวน: ${item.qty} ${item.unit}</p>
+                        <p class="text-xs text-muji-500 font-medium">จำนวน: ${item.qty} ${item.unit}</p>
                     </div>
                     <span class="font-bold text-xs md:text-sm">${item.finalPrice.toLocaleString()} ฿</span>
                 </div>
@@ -967,6 +1031,13 @@
                 link.click();
             });
         }
+
+        // Initialize App on Load
+        window.onload = function() {
+            renderCategories();
+            renderProcedureCards();
+            updateCartUI();
+        };
     </script>
 </body>
 </html>
