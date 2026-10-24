@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- html2canvas Library for Image Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Canvas Confetti Library for Fireworks Effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <!-- Google Fonts: Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -62,9 +64,39 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #a3845b;
         }
+
+        /* Savings Toast Floating Animation (Dead-Center Screen) */
+        @keyframes centerFadeBounce {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -40%) scale(0.85);
+            }
+            15% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.08);
+            }
+            25% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+            75% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -60%) scale(0.9);
+            }
+        }
+        .savings-toast-anim {
+            animation: centerFadeBounce 2.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            pointer-events: none;
+        }
     </style>
 </head>
-<body class="bg-[#f7f5f0] text-muji-dark min-h-screen pb-28 md:pb-16 text-base">
+<body class="bg-[#f7f5f0] text-muji-dark min-h-screen pb-28 md:pb-16 text-base relative">
+
+    <!-- Floating Savings Toast Notification Container (Dead-Center Screen) -->
+    <div id="savingsToastContainer" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none flex flex-col items-center"></div>
 
     <!-- Header Section -->
     <header class="bg-white border-b border-muji-200 sticky top-0 z-30 shadow-sm">
@@ -74,7 +106,10 @@
                     <i class="fa-solid fa-leaf text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-lg md:text-xl leading-tight text-muji-dark"><a href="https://maps.google.com/?cid=692252098073688666&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" target="_blank" class="hover:underline">DR.NANA CLINIC</a> <span class="text-muji-matcha font-normal">×</span> GUNNA CLINIC</h1>
+                    <h1 class="font-bold text-lg md:text-xl leading-tight text-muji-dark">
+                        <a href="https://maps.google.com/?cid=692252098073688666&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" target="_blank" class="hover:underline">DR.NANA CLINIC</a> 
+                        <span class="text-muji-matcha font-normal">×</span> GUNNA CLINIC
+                    </h1>
                     <p class="text-xs md:text-sm text-muji-500 font-medium">โปรแกรมประเมินราคาหัตถการ & โปรโมชันพิเศษ</p>
                 </div>
             </div>
@@ -174,9 +209,9 @@
             <p class="text-xs text-muji-400">ประเมินราคารวมสุทธิ</p>
             <p id="mobileTotalPrice" class="text-xl font-bold text-muji-matcha">0 ฿</p>
         </div>
-        <button onclick="generateSummaryModal()" id="mobileCheckoutBtn" disabled class="bg-muji-matcha text-white px-4 py-2.5 rounded-xl font-medium text-xs md:text-sm disabled:bg-slate-200 disabled:text-slate-400 transition-colors flex items-center space-x-2">
-            <i class="fa-solid fa-camera"></i>
-            <span>สรุปแคปรูป</span>
+        <button onclick="scrollToSummary()" class="bg-muji-matcha hover:bg-muji-matchaDark text-white px-4 py-2.5 rounded-xl font-medium text-xs md:text-sm transition-colors flex items-center space-x-2 cursor-pointer shadow-sm">
+            <i class="fa-solid fa-arrow-down"></i>
+            <span>ไปที่ล่างสุด</span>
         </button>
     </div>
 
@@ -268,11 +303,11 @@
                 category: 'HIFU',
                 unit: 'shots',
                 basePrice: 30,
-                minUnitPrice: 19.4,
+                minUnitPrice: 22,
                 hasOldPatientRate: true,
                 oldPatientNote: 'สิทธิ์ราคาคนไข้เก่า 9,700 THB / 500 shots',
                 image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784140/Screenshot_2026-10-24_023130.png',
-                description: '100 shots: 2,800 | 200 shots: 5,200 | 300 shots: 7,500 | 400 shots: 9,600 | 500 shots: 9,990 THB'
+                description: '100 shots: 2,800 | 200 shots: 5,200 | 300 shots: 7,500 | 400 shots: 9,600 | 500 shots: 11,000 THB'
             },
             // BOTULINUM TOXIN
             {
@@ -503,9 +538,9 @@
                 category: 'LASER',
                 unit: 'ครั้ง',
                 basePrice: 3000,
-                minUnitPrice: 2600,
+                minUnitPrice: 2500,
                 image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023436.png',
-                description: '1 ครั้ง: 3,000 | 5 ครั้ง: 14,000 | 10 ครั้ง: 26,000 THB'
+                description: '1 ครั้ง: 3,000 | 5 ครั้ง: 14,000 | 10 ครั้ง: 26,000 THB (มีเซ็ตจับคู่คู่กับ Blink / Glossy)'
             },
             {
                 id: 'co2-full',
@@ -515,7 +550,7 @@
                 basePrice: 8000,
                 minUnitPrice: 4000,
                 image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792784142/Screenshot_2026-10-24_023422.png',
-                description: '1 ครั้ง: 6,000 THB (จากปกติ 8,000) | จัดเซ็ตคู่ Blink 3 ครั้ง เหลือ 4,000 THB / จัดเซ็ตคู่ Glossy เพียง 4,000 THB'
+                description: '1 ครั้ง: 6,000 THB (จากปกติ 8,000) | จัดเซ็ตคู่ Blink 3 cc เหลือ 4,000 THB / จัดเซ็ตคู่ Glossy เพียง 4,000 THB'
             },
             {
                 id: 'acne-program',
@@ -533,6 +568,49 @@
         let cart = {}; // { procedureId: quantity }
         let isOldPatientMap = {}; // { procedureId: boolean }
         let selectedCategory = 'All';
+        let previousDiscount = 0; // Track previous discount for savings celebration trigger
+
+        // Trigger Mini Fireworks & Dead-Center Floating Savings Notification
+        function triggerSavingsCelebration(totalDiscount, reason) {
+            // Launch Canvas Confetti Fireworks
+            try {
+                confetti({
+                    particleCount: 75,
+                    spread: 85,
+                    origin: { y: 0.5 },
+                    colors: ['#7c8c62', '#c2a880', '#e8ddc8', '#a3845b', '#fbbf24']
+                });
+            } catch (e) {
+                console.log('Confetti effect error:', e);
+            }
+
+            // Create Floating Toast Notification with Accumulated Total Discount centered in screen
+            const container = document.getElementById('savingsToastContainer');
+            container.innerHTML = ''; // Clear previous toast
+            
+            const toast = document.createElement('div');
+            toast.className = 'savings-toast-anim bg-muji-dark/95 backdrop-blur-md text-white px-7 py-4 rounded-3xl shadow-2xl flex items-center gap-3.5 border-2 border-amber-400/60 z-50 whitespace-nowrap min-w-[280px] justify-center';
+            toast.innerHTML = `
+                <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 text-muji-dark flex items-center justify-center font-extrabold text-xl shadow-lg flex-shrink-0">
+                    <i class="fa-solid fa-gift"></i>
+                </div>
+                <div class="flex flex-col items-start">
+                    <span class="text-xs text-amber-300 font-semibold uppercase tracking-wider">
+                        ${reason ? reason : 'ปลดล็อกส่วนลดโปรโมชัน!'}
+                    </span>
+                    <div class="text-xs md:text-sm font-semibold">
+                        ประหยัดสะสมรวมทั้งหมด <span class="text-emerald-300 font-extrabold text-lg md:text-xl drop-shadow-sm">-${totalDiscount.toLocaleString()} ฿</span>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                if (toast && toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 2800);
+        }
 
         // Render Category Filter Tabs
         function renderCategories() {
@@ -554,6 +632,15 @@
             selectedCategory = cat;
             renderCategories();
             renderProcedureCards();
+        }
+
+        // Helper to format starting price label
+        function getStartingPriceLabel(item) {
+            if (item.id === 'botox-neuronox') return '3,990 ฿ <span class="text-[10px] text-muji-400 font-normal">/ 50 units</span>';
+            if (item.id === 'botox-xeomin') return '8,000 ฿ <span class="text-[10px] text-muji-400 font-normal">/ 50 units</span>';
+            if (item.id === 'botox-nabota') return '4,390 ฿ <span class="text-[10px] text-muji-400 font-normal">/ 50 units</span>';
+            if (item.id === 'botox-allergan') return '9,890 ฿ <span class="text-[10px] text-muji-400 font-normal">/ 50 units</span>';
+            return `${item.basePrice.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQty ? item.baseQty + ' ' : ''}${item.unit}</span>`;
         }
 
         // Render Procedures Cards grouped by Category in 2 columns
@@ -595,7 +682,7 @@
                                     <div class="pt-1">
                                         <label class="inline-flex items-center cursor-pointer text-xs text-muji-matchaDark font-medium bg-muji-matchaLight/60 p-1.5 rounded-lg w-full">
                                             <input type="checkbox" onchange="toggleOldPatient('${item.id}')" ${isOld ? 'checked' : ''} class="rounded border-muji-300 text-muji-matcha focus:ring-muji-matcha mr-1.5 flex-shrink-0">
-                                            <span class="text-[11px] leading-tight">สิทธิ์คนไข้เก่า</span>
+                                            <span class="text-[11px] leading-tight font-semibold">สิทธิ์คนไข้เก่า (คุ้มสุด)</span>
                                         </label>
                                     </div>
                                 ` : ''}
@@ -605,7 +692,7 @@
                             <div class="flex items-center justify-between pt-3 mt-3 border-t border-muji-100">
                                 <div class="space-y-0.5">
                                     <span class="text-xs text-muji-400 font-medium">ราคาเริ่มต้น:</span>
-                                    <p class="text-xs font-bold text-muji-matcha">${item.basePrice.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQty ? item.baseQty + ' ' : ''}${item.unit}</span></p>
+                                    <p class="text-xs font-bold text-muji-matcha">${getStartingPriceLabel(item)}</p>
                                 </div>
                                 <div class="flex items-center bg-muji-50 border border-muji-200 rounded-xl p-1">
                                     <button onclick="updateQty('${item.id}', -${step})" class="w-7 h-7 rounded-lg bg-white shadow-xs text-muji-dark hover:bg-muji-100 flex items-center justify-center font-bold text-xs transition-colors cursor-pointer">-</button>
@@ -696,154 +783,145 @@
                 let calculatedPrice = 0;
                 let notes = [];
 
-                if (isOld) notes.push('ใช้สิทธิ์ราคาคนไข้เก่า');
+                if (isOld) notes.push('ใช้สิทธิ์ราคาคนไข้เก่า (คุ้มสุด)');
 
-                // Regular Pricing rules per item
+                // Calculate Normal Base Subtotal
                 if (id === 'hifu') {
+                    // Standard base price without tier discount is 30 THB / shot
                     normalItemSubtotal = qty * 30;
-                    if (qty >= 500) {
-                        let baseRate = isOld ? 9700 : 9990;
-                        calculatedPrice = (qty / 500) * baseRate;
-                    } else if (qty >= 400) {
-                        calculatedPrice = 9600 + (qty - 400) * 24;
-                    } else if (qty >= 300) {
-                        calculatedPrice = 7500 + (qty - 300) * 25;
-                    } else if (qty >= 200) {
-                        calculatedPrice = 5200 + (qty - 200) * 26;
-                    } else if (qty >= 100) {
-                        calculatedPrice = 2800 + (qty - 100) * 28;
-                    } else {
-                        calculatedPrice = qty * 30;
-                    }
+                } else if (id === 'botox-neuronox') {
+                    // Base rate based on 50 units base price (3990 / 50 = 79.8 per unit)
+                    normalItemSubtotal = (qty / 50) * 3990;
+                } else if (id === 'botox-xeomin') {
+                    normalItemSubtotal = (qty / 50) * 8000;
+                } else if (id === 'botox-nabota') {
+                    normalItemSubtotal = (qty / 50) * 4390;
+                } else if (id === 'botox-allergan') {
+                    normalItemSubtotal = (qty / 50) * 9890;
+                } else {
+                    normalItemSubtotal = qty * item.basePrice;
                 }
-                else if (id === 'filler-neuramis') {
-                    normalItemSubtotal = qty * 4900;
-                    let rate = (qty >= 3) ? 3900 : 4900;
-                    calculatedPrice = qty * rate;
-                    if (qty >= 3) notes.push('โปรซื้อ ≥ 3 cc เหลือ 3,900 THB / cc');
-                }
-                else if (id === 'filler-royal') {
-                    normalItemSubtotal = qty * 8900;
-                    let rate = (qty >= 4) ? 6900 : 8900;
-                    calculatedPrice = qty * rate;
-                    if (qty >= 4) notes.push('โปรซื้อ ≥ 4 cc เหลือ 6,900 THB / cc');
-                }
-                else if (id === 'filler-atiere') {
-                    normalItemSubtotal = qty * 10900;
-                    let rate = (qty >= 4) ? 7500 : 10900;
-                    calculatedPrice = qty * rate;
-                    if (qty >= 4) notes.push('โปรซื้อ ≥ 4 cc เหลือ 7,500 THB / cc');
-                }
-                else if (id === 'filler-definisse') {
-                    normalItemSubtotal = qty * 14900;
-                    let rate = (qty >= 2) ? 12000 : 14900;
-                    calculatedPrice = qty * rate;
-                    if (qty >= 2) notes.push('โปรซื้อ ≥ 2 cc เหลือ 12,000 THB / cc');
-                }
-                else if (id === 'botox-neuronox') {
-                    if (qty >= 200) normalItemSubtotal = (qty / 200) * 14000;
-                    else if (qty >= 100) normalItemSubtotal = (qty / 100) * 7500;
-                    else if (qty >= 50) normalItemSubtotal = (qty / 50) * 3990;
-                    else normalItemSubtotal = qty * (3990 / 50);
 
-                    if (isOld) {
+                // Old Patient Rate Takes Priority Over Standard Tier Rates
+                if (isOld) {
+                    if (id === 'hifu') {
+                        if (qty >= 500) calculatedPrice = (qty / 500) * 9700;
+                        else if (qty >= 400) calculatedPrice = 9600 + (qty - 400) * 24;
+                        else if (qty >= 300) calculatedPrice = 7500 + (qty - 300) * 25;
+                        else if (qty >= 200) calculatedPrice = 5200 + (qty - 200) * 26;
+                        else calculatedPrice = qty * 28;
+                    } else if (id === 'botox-neuronox') {
                         if (qty >= 200) calculatedPrice = (qty / 200) * 13780;
                         else if (qty >= 100) calculatedPrice = (qty / 100) * 6890;
-                        else if (qty >= 50) calculatedPrice = (qty / 50) * 3500;
-                        else calculatedPrice = qty * (3500 / 50);
+                        else calculatedPrice = (qty / 50) * 3500;
+                    } else if (id === 'botox-xeomin') {
+                        calculatedPrice = qty >= 100 ? (qty / 100) * 12000 : (qty / 50) * 6000;
                     } else {
                         calculatedPrice = normalItemSubtotal;
                     }
-                }
-                else if (id === 'botox-xeomin') {
-                    normalItemSubtotal = qty >= 100 ? (qty/100)*14900 : (qty/50)*8000;
-                    calculatedPrice = isOld 
-                        ? (qty >= 100 ? (qty/100)*12000 : (qty/50)*6000)
-                        : normalItemSubtotal;
-                }
-                else if (id === 'botox-nabota') {
-                    normalItemSubtotal = qty >= 100 ? (qty / 100) * 7890 : (qty / 50) * 4390;
-                    calculatedPrice = normalItemSubtotal;
-                }
-                else if (id === 'botox-allergan') {
-                    normalItemSubtotal = qty >= 100 ? (qty / 100) * 17900 : (qty / 50) * 9890;
-                    calculatedPrice = normalItemSubtotal;
-                }
-                else if (id === 'sculptra') {
-                    normalItemSubtotal = qty * 25000;
-                    calculatedPrice = (qty >= 3) ? (qty / 3) * 68000 : qty * 25000;
-                }
-                else if (id === 'radiesse') {
-                    normalItemSubtotal = qty * 32000;
-                    calculatedPrice = (qty >= 2) ? (qty / 2) * 60000 : qty * 32000;
-                }
-                else if (id === 'juvelook') {
-                    normalItemSubtotal = qty * 15900;
-                    calculatedPrice = (qty >= 2) ? (qty / 2) * 29000 : qty * 15900;
-                }
-                else if (id === 'skin-blink') {
-                    normalItemSubtotal = qty * 890;
-                    calculatedPrice = (qty >= 5) ? (qty / 5) * 3500 : qty * 890;
-                }
-                else if (id === 'skin-max') {
-                    normalItemSubtotal = qty * 1800;
-                    calculatedPrice = (qty >= 3) ? (qty / 3) * 4700 : qty * 1800;
-                }
-                else if (id === 'skin-hiyan') {
-                    normalItemSubtotal = qty * 2390;
-                    calculatedPrice = (qty >= 3) ? (qty / 3) * 5890 : qty * 2390;
-                }
-                else if (id === 'skin-glossy') {
-                    normalItemSubtotal = qty * 1750;
-                    if (qty >= 10) calculatedPrice = (qty / 10) * 11900;
-                    else if (qty >= 5) calculatedPrice = (qty / 5) * 6690;
-                    else calculatedPrice = qty * 1750;
-                }
-                else if (id === 'vitaran') {
-                    normalItemSubtotal = qty * 4000;
-                    if (qty >= 4) calculatedPrice = (qty / 4) * 9999;
-                    else if (qty >= 2) calculatedPrice = (qty / 2) * 6000;
-                    else calculatedPrice = qty * 4000;
-                }
-                else if (id === 'fat-neobella') {
-                    normalItemSubtotal = qty * 3690;
-                    calculatedPrice = (qty >= 3) ? (qty / 3) * 9200 : qty * 3690;
-                }
-                else if (id === 'iv-white') {
-                    normalItemSubtotal = qty * 1590;
-                    calculatedPrice = qty >= 10 ? (qty / 10) * 14500 : (qty >= 5 ? (qty / 5) * 7750 : qty * 1590);
-                    if (hasOtherProcedures('iv-white')) {
-                        calculatedPrice *= 0.85;
-                        notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
+                } else {
+                    // Standard Pricing rules per item
+                    if (id === 'hifu') {
+                        if (qty >= 500) calculatedPrice = (qty / 500) * 11000;
+                        else if (qty >= 400) calculatedPrice = 9600 + (qty - 400) * 24;
+                        else if (qty >= 300) calculatedPrice = 7500 + (qty - 300) * 25;
+                        else if (qty >= 200) calculatedPrice = 5200 + (qty - 200) * 26;
+                        else if (qty >= 100) calculatedPrice = 2800 + (qty - 100) * 28;
+                        else calculatedPrice = qty * 30;
                     }
-                }
-                else if (id === 'iv-signature') {
-                    normalItemSubtotal = qty * 2550;
-                    calculatedPrice = qty >= 10 ? (qty / 10) * 21000 : (qty >= 3 ? (qty / 3) * 7200 : qty * 2550);
-                    if (hasOtherProcedures('iv-signature')) {
-                        calculatedPrice *= 0.85;
-                        notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
+                    else if (id === 'botox-neuronox') {
+                        calculatedPrice = normalItemSubtotal;
                     }
-                }
-                else if (id === 'laser-yag') {
-                    normalItemSubtotal = qty * 3000;
-                    if (qty >= 10) calculatedPrice = (qty / 10) * 26000;
-                    else if (qty >= 5) calculatedPrice = (qty / 5) * 14000;
-                    else calculatedPrice = qty * 3000;
-                }
-                else if (id === 'co2-full') {
-                    normalItemSubtotal = qty * 8000;
-                    calculatedPrice = qty * 6000;
-                }
-                else if (id === 'acne-program') {
-                    normalItemSubtotal = qty * 1090;
-                    if (qty >= 10) calculatedPrice = (qty / 10) * 8900;
-                    else if (qty >= 5) calculatedPrice = (qty / 5) * 4950;
-                    else calculatedPrice = qty * 1090;
-                }
-                else {
-                    normalItemSubtotal = qty * item.basePrice;
-                    calculatedPrice = normalItemSubtotal;
+                    else if (id === 'botox-xeomin') {
+                        calculatedPrice = normalItemSubtotal;
+                    }
+                    else if (id === 'botox-nabota') {
+                        calculatedPrice = normalItemSubtotal;
+                    }
+                    else if (id === 'botox-allergan') {
+                        calculatedPrice = normalItemSubtotal;
+                    }
+                    else if (id === 'filler-neuramis') {
+                        let rate = (qty >= 3) ? 3900 : 4900;
+                        calculatedPrice = qty * rate;
+                        if (qty >= 3) notes.push('โปรซื้อ ≥ 3 cc เหลือ 3,900 THB / cc');
+                    }
+                    else if (id === 'filler-royal') {
+                        let rate = (qty >= 4) ? 6900 : 8900;
+                        calculatedPrice = qty * rate;
+                        if (qty >= 4) notes.push('โปรซื้อ ≥ 4 cc เหลือ 6,900 THB / cc');
+                    }
+                    else if (id === 'filler-atiere') {
+                        let rate = (qty >= 4) ? 7500 : 10900;
+                        calculatedPrice = qty * rate;
+                        if (qty >= 4) notes.push('โปรซื้อ ≥ 4 cc เหลือ 7,500 THB / cc');
+                    }
+                    else if (id === 'filler-definisse') {
+                        let rate = (qty >= 2) ? 12000 : 14900;
+                        calculatedPrice = qty * rate;
+                        if (qty >= 2) notes.push('โปรซื้อ ≥ 2 cc เหลือ 12,000 THB / cc');
+                    }
+                    else if (id === 'sculptra') {
+                        calculatedPrice = (qty >= 3) ? (qty / 3) * 68000 : qty * 25000;
+                    }
+                    else if (id === 'radiesse') {
+                        calculatedPrice = (qty >= 2) ? (qty / 2) * 60000 : qty * 32000;
+                    }
+                    else if (id === 'juvelook') {
+                        calculatedPrice = (qty >= 2) ? (qty / 2) * 29000 : qty * 15900;
+                    }
+                    else if (id === 'skin-blink') {
+                        calculatedPrice = (qty >= 5) ? (qty / 5) * 3500 : qty * 890;
+                    }
+                    else if (id === 'skin-max') {
+                        calculatedPrice = (qty >= 3) ? (qty / 3) * 4700 : qty * 1800;
+                    }
+                    else if (id === 'skin-hiyan') {
+                        calculatedPrice = (qty >= 3) ? (qty / 3) * 5890 : qty * 2390;
+                    }
+                    else if (id === 'skin-glossy') {
+                        if (qty >= 10) calculatedPrice = (qty / 10) * 11900;
+                        else if (qty >= 5) calculatedPrice = (qty / 5) * 6690;
+                        else calculatedPrice = qty * 1750;
+                    }
+                    else if (id === 'vitaran') {
+                        if (qty >= 4) calculatedPrice = (qty / 4) * 9999;
+                        else if (qty >= 2) calculatedPrice = (qty / 2) * 6000;
+                        else calculatedPrice = qty * 4000;
+                    }
+                    else if (id === 'fat-neobella') {
+                        calculatedPrice = (qty >= 3) ? (qty / 3) * 9200 : qty * 3690;
+                    }
+                    else if (id === 'iv-white') {
+                        calculatedPrice = qty >= 10 ? (qty / 10) * 14500 : (qty >= 5 ? (qty / 5) * 7750 : qty * 1590);
+                        if (hasOtherProcedures('iv-white')) {
+                            calculatedPrice *= 0.85;
+                            notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
+                        }
+                    }
+                    else if (id === 'iv-signature') {
+                        calculatedPrice = qty >= 10 ? (qty / 10) * 21000 : (qty >= 3 ? (qty / 3) * 7200 : qty * 2550);
+                        if (hasOtherProcedures('iv-signature')) {
+                            calculatedPrice *= 0.85;
+                            notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
+                        }
+                    }
+                    else if (id === 'laser-yag') {
+                        if (qty >= 10) calculatedPrice = (qty / 10) * 26000;
+                        else if (qty >= 5) calculatedPrice = (qty / 5) * 14000;
+                        else calculatedPrice = qty * 3000;
+                    }
+                    else if (id === 'co2-full') {
+                        calculatedPrice = qty * 6000;
+                    }
+                    else if (id === 'acne-program') {
+                        if (qty >= 10) calculatedPrice = (qty / 10) * 8900;
+                        else if (qty >= 5) calculatedPrice = (qty / 5) * 4950;
+                        else calculatedPrice = qty * 1090;
+                    }
+                    else {
+                        calculatedPrice = normalItemSubtotal;
+                    }
                 }
 
                 subtotal += normalItemSubtotal;
@@ -855,14 +933,45 @@
                     basePrice: item.basePrice,
                     normalSubtotal: normalItemSubtotal,
                     finalPrice: Math.round(calculatedPrice),
+                    isOld,
                     notes
                 });
             });
 
-            // SPECIAL CROSS-CATEGORY BUNDLE OVERRIDES
+            // SPECIAL CROSS-CATEGORY BUNDLE OVERRIDES (Only apply if Old Patient rate is NOT active)
             const findItem = (id) => items.find(i => i.id === id);
 
-            // BUNDLE 1: Fractional CO2 ทั่วหน้า (1) + Blink (3 cc) = 4,000 + 1,500
+            // BUNDLE 1: HIFU 500 shots + Neuronox 50 units = 9,890 + 3,690
+            const hifuItem = findItem('hifu');
+            const neuronoxItem = findItem('botox-neuronox');
+
+            if (hifuItem && neuronoxItem && !hifuItem.isOld && !neuronoxItem.isOld) {
+                if (cart['hifu'] >= 500 && cart['botox-neuronox'] >= 50) {
+                    const bundleCount = Math.min(Math.floor(cart['hifu'] / 500), Math.floor(cart['botox-neuronox'] / 50));
+                    
+                    const remHifu = cart['hifu'] - (bundleCount * 500);
+                    let remHifuPrice = 0;
+                    if (remHifu >= 500) remHifuPrice = (remHifu / 500) * 11000;
+                    else if (remHifu >= 400) remHifuPrice = 9600 + (remHifu - 400) * 24;
+                    else if (remHifu >= 300) remHifuPrice = 7500 + (remHifu - 300) * 25;
+                    else if (remHifu >= 200) remHifuPrice = 5200 + (remHifu - 200) * 26;
+                    else if (remHifu >= 100) remHifuPrice = 2800 + (remHifu - 100) * 28;
+                    else remHifuPrice = remHifu * 30;
+
+                    const remBotox = cart['botox-neuronox'] - (bundleCount * 50);
+                    let remBotoxPrice = 0;
+                    if (remBotox >= 200) remBotoxPrice = (remBotox / 200) * 14000;
+                    else if (remBotox >= 100) remBotoxPrice = (remBotox / 100) * 7500;
+                    else if (remBotox >= 50) remBotoxPrice = (remBotox / 50) * 3990;
+                    else remBotoxPrice = remBotox * (3990 / 50);
+
+                    hifuItem.finalPrice = (bundleCount * 9890) + remHifuPrice;
+                    neuronoxItem.finalPrice = (bundleCount * 3690) + remBotoxPrice;
+                    appliedBundles.push(`Set HIFU 500 shots + Neuronox 50 units (ราคาพิเศษ 9,890 + 3,690 THB)`);
+                }
+            }
+
+            // BUNDLE 2: Fractional CO2 ทั่วหน้า (1) + Blink (3 cc) = 4,000 + 1,500
             if (cart['co2-full'] >= 1 && cart['skin-blink'] >= 3) {
                 const co2 = findItem('co2-full');
                 const blink = findItem('skin-blink');
@@ -879,7 +988,7 @@
                     appliedBundles.push(`Set Fractional CO2 ทั่วหน้า + Blink 3 cc (ราคาพิเศษ 4,000 + 1,500 THB)`);
                 }
             }
-            // BUNDLE 2: Fractional CO2 ทั่วหน้า + Glossy 3 cc
+            // BUNDLE 3: Fractional CO2 ทั่วหน้า + Glossy 3 cc
             else if (cart['co2-full'] >= 1 && cart['skin-glossy'] >= 3) {
                 const co2 = findItem('co2-full');
                 const glossy = findItem('skin-glossy');
@@ -890,19 +999,93 @@
                 }
             }
 
-            if (cart['hifu'] >= 500 && cart['botox-neuronox'] >= 50 && cart['fat-neobella'] >= 1) {
-                const hifu = findItem('hifu');
-                const fat = findItem('fat-neobella');
-                if (hifu && fat) {
-                    hifu.finalPrice = (cart['hifu'] / 500) * 9720;
-                    fat.finalPrice = cart['fat-neobella'] * 3066;
-                    appliedBundles.push('Set HIFU 500+ + Neuronox + Neobella (ราคาเรทพิเศษ)');
+            // BUNDLE 4: LASER Nd:YAG Combos (Check highest value combination down to lower ones)
+            const yagItem = findItem('laser-yag');
+            const blinkItem = findItem('skin-blink');
+            const glossyItem = findItem('skin-glossy');
+
+            if (yagItem && !yagItem.isOld) {
+                const yagQty = cart['laser-yag'] || 0;
+                const blinkQty = cart['skin-blink'] || 0;
+                const glossyQty = cart['skin-glossy'] || 0;
+
+                // Option D: Nd:YAG 1 + Glossy 3 cc + Blink 2 cc = 2,500 + 3,990 + 1,000
+                if (yagQty >= 1 && glossyQty >= 3 && blinkQty >= 2) {
+                    const bundleCount = Math.min(Math.floor(yagQty), Math.floor(glossyQty / 3), Math.floor(blinkQty / 2));
+                    if (bundleCount > 0) {
+                        const remYag = yagQty - bundleCount;
+                        let remYagPrice = remYag >= 10 ? (remYag / 10) * 26000 : (remYag >= 5 ? (remYag / 5) * 14000 : remYag * 3000);
+                        yagItem.finalPrice = (bundleCount * 2500) + remYagPrice;
+
+                        const remGlossy = glossyQty - (bundleCount * 3);
+                        let remGlossyPrice = remGlossy >= 10 ? (remGlossy / 10) * 11900 : (remGlossy >= 5 ? (remGlossy / 5) * 6690 : remGlossy * 1750);
+                        if (glossyItem) glossyItem.finalPrice = (bundleCount * 3990) + remGlossyPrice;
+
+                        const remBlink = blinkQty - (bundleCount * 2);
+                        let remBlinkPrice = remBlink >= 5 ? (remBlink / 5) * 3500 : remBlink * 890;
+                        if (blinkItem) blinkItem.finalPrice = (bundleCount * 1000) + remBlinkPrice;
+
+                        appliedBundles.push(`Set Nd:YAG + Glossy 3 cc + Blink 2 cc (ราคาพิเศษ 2,500 + 3,990 + 1,000 THB)`);
+                    }
+                }
+                // Option C: Nd:YAG 1 + Glossy 3 cc = 2,500 + 4,100
+                else if (yagQty >= 1 && glossyQty >= 3) {
+                    const bundleCount = Math.min(Math.floor(yagQty), Math.floor(glossyQty / 3));
+                    if (bundleCount > 0) {
+                        const remYag = yagQty - bundleCount;
+                        let remYagPrice = remYag >= 10 ? (remYag / 10) * 26000 : (remYag >= 5 ? (remYag / 5) * 14000 : remYag * 3000);
+                        yagItem.finalPrice = (bundleCount * 2500) + remYagPrice;
+
+                        const remGlossy = glossyQty - (bundleCount * 3);
+                        let remGlossyPrice = remGlossy >= 10 ? (remGlossy / 10) * 11900 : (remGlossy >= 5 ? (remGlossy / 5) * 6690 : remGlossy * 1750);
+                        if (glossyItem) glossyItem.finalPrice = (bundleCount * 4100) + remGlossyPrice;
+
+                        appliedBundles.push(`Set Nd:YAG + Glossy 3 cc (ราคาพิเศษ 2,500 + 4,100 THB)`);
+                    }
+                }
+                // Option B: Nd:YAG 1 + Blink 3 cc = 2,600 + 1,500
+                else if (yagQty >= 1 && blinkQty >= 3) {
+                    const bundleCount = Math.min(Math.floor(yagQty), Math.floor(blinkQty / 3));
+                    if (bundleCount > 0) {
+                        const remYag = yagQty - bundleCount;
+                        let remYagPrice = remYag >= 10 ? (remYag / 10) * 26000 : (remYag >= 5 ? (remYag / 5) * 14000 : remYag * 3000);
+                        yagItem.finalPrice = (bundleCount * 2600) + remYagPrice;
+
+                        const remBlink = blinkQty - (bundleCount * 3);
+                        let remBlinkPrice = remBlink >= 5 ? (remBlink / 5) * 3500 : remBlink * 890;
+                        if (blinkItem) blinkItem.finalPrice = (bundleCount * 1500) + remBlinkPrice;
+
+                        appliedBundles.push(`Set Nd:YAG + Blink 3 cc (ราคาพิเศษ 2,600 + 1,500 THB)`);
+                    }
+                }
+                // Option A: Nd:YAG 1 + Blink 1 cc = 2,800 + 600
+                else if (yagQty >= 1 && blinkQty >= 1) {
+                    const bundleCount = Math.min(Math.floor(yagQty), Math.floor(blinkQty));
+                    if (bundleCount > 0) {
+                        const remYag = yagQty - bundleCount;
+                        let remYagPrice = remYag >= 10 ? (remYag / 10) * 26000 : (remYag >= 5 ? (remYag / 5) * 14000 : remYag * 3000);
+                        yagItem.finalPrice = (bundleCount * 2800) + remYagPrice;
+
+                        const remBlink = blinkQty - bundleCount;
+                        let remBlinkPrice = remBlink >= 5 ? (remBlink / 5) * 3500 : remBlink * 890;
+                        if (blinkItem) blinkItem.finalPrice = (bundleCount * 600) + remBlinkPrice;
+
+                        appliedBundles.push(`Set Nd:YAG + Blink 1 cc (ราคาพิเศษ 2,800 + 600 THB)`);
+                    }
                 }
             }
 
             // Calculate Totals
             let grandTotal = items.reduce((sum, item) => sum + item.finalPrice, 0);
             let totalDiscount = subtotal - grandTotal;
+
+            // Trigger celebration when savings amount increases
+            if (totalDiscount > previousDiscount) {
+                const latestBundle = appliedBundles.length > 0 ? appliedBundles[appliedBundles.length - 1] : '';
+                const shortReason = latestBundle ? latestBundle.split('(')[0].trim() : 'รับส่วนลดโปรโมชันพิเศษ!';
+                triggerSavingsCelebration(totalDiscount, shortReason);
+            }
+            previousDiscount = totalDiscount;
 
             return { items, subtotal, grandTotal, totalDiscount, appliedBundles };
         }
@@ -926,8 +1109,8 @@
                 document.getElementById('totalPrice').innerText = '0 ฿';
                 document.getElementById('mobileTotalPrice').innerText = '0 ฿';
                 document.getElementById('checkoutBtn').disabled = true;
-                document.getElementById('mobileCheckoutBtn').disabled = true;
                 bundlesContainer.classList.add('hidden');
+                previousDiscount = 0;
                 return;
             }
 
@@ -970,7 +1153,6 @@
             document.getElementById('mobileTotalPrice').innerText = `${grandTotal.toLocaleString()} ฿`;
             
             document.getElementById('checkoutBtn').disabled = false;
-            document.getElementById('mobileCheckoutBtn').disabled = false;
         }
 
         // Prepare and Show Summary Modal Card
@@ -1046,6 +1228,14 @@
             renderProcedureCards();
             updateCartUI();
         };
+
+        // Scroll to summary section on mobile
+        function scrollToSummary() {
+            const summarySection = document.querySelector('section.lg\\:col-span-5');
+            if (summarySection) {
+                summarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
     </script>
 </body>
 </html>
