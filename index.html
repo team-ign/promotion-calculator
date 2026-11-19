@@ -12,6 +12,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Canvas Confetti Library for Fireworks Effect -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- PapaParse Library for Parsing Google Sheets CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <!-- Google Fonts: Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -65,27 +67,12 @@
             background: #a3845b;
         }
 
-        /* Savings Toast Floating Animation (Dead-Center Screen) */
         @keyframes centerFadeBounce {
-            0% {
-                opacity: 0;
-                transform: translate(-50%, -40%) scale(0.85);
-            }
-            15% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1.08);
-            }
-            25% {
-                transform: translate(-50%, -50%) scale(1);
-            }
-            75% {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
-            100% {
-                opacity: 0;
-                transform: translate(-50%, -60%) scale(0.9);
-            }
+            0% { opacity: 0; transform: translate(-50%, -40%) scale(0.85); }
+            15% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+            25% { transform: translate(-50%, -50%) scale(1); }
+            75% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -60%) scale(0.9); }
         }
         .savings-toast-anim {
             animation: centerFadeBounce 2.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -95,15 +82,15 @@
 </head>
 <body class="bg-[#f7f5f0] text-muji-dark min-h-screen pb-28 md:pb-16 text-base relative">
 
-    <!-- Floating Savings Toast Notification Container (Dead-Center Screen) -->
+    <!-- Floating Savings Toast Notification Container -->
     <div id="savingsToastContainer" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none flex flex-col items-center"></div>
 
     <!-- Header Section -->
     <header class="bg-white border-b border-muji-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between">
             <div class="flex items-center space-x-3">
-                <div class="w-11 h-11 rounded-full bg-muji-matcha flex items-center justify-center text-white shadow-sm flex-shrink-0">
-                    <i class="fa-solid fa-leaf text-xl"></i>
+                <div class="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center shadow-sm flex-shrink-0 border border-muji-200 bg-muji-matcha">
+                    <img src="https://res.cloudinary.com/yuyprw6e/image/upload/v1792783712/LINE_OA_Profile.jpg" alt="Logo" class="w-full h-full object-cover" onerror="this.style.display='none'">
                 </div>
                 <div>
                     <h1 class="font-bold text-lg md:text-xl leading-tight text-muji-dark">
@@ -112,6 +99,11 @@
                     </h1>
                     <p class="text-xs md:text-sm text-muji-500 font-medium">โปรแกรมประเมินราคาหัตถการ & โปรโมชันพิเศษ</p>
                 </div>
+            </div>
+            <!-- Data Source Indicator -->
+            <div id="syncStatusBadge" class="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-muji-50 border border-muji-200 text-muji-500">
+                <span class="w-2 h-2 rounded-full bg-muji-matcha animate-pulse"></span>
+                <span>พร้อมคำนวณ</span>
             </div>
         </div>
     </header>
@@ -122,26 +114,17 @@
         <!-- Left Column: Procedure List & Selector (7 Cols) -->
         <section class="lg:col-span-7 space-y-5">
             
-            <!-- Information Banner -->
-            <div class="bg-white rounded-2xl p-4 md:p-5 border border-muji-200 shadow-sm relative overflow-hidden flex items-center justify-between">
-                <div class="space-y-1">
-                    <div class="inline-flex items-center space-x-1.5 bg-muji-matchaLight text-muji-matchaDark text-xs px-3 py-1 rounded-full font-semibold">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span>Smart Bundle Calculator</span>
-                    </div>
-                    <h2 class="text-base md:text-lg font-bold text-muji-dark">คำนวณโปรโมชันและส่วนลดเซ็ตจับคู่ให้อัตโนมัติ</h2>
-                    <p class="text-xs md:text-sm text-muji-500">ใส่จำนวนหัตถการ ระบบจะปรับลดราคาตามเรทสเกลและ Bundle โปรโมชันให้อัตโนมัติ</p>
-                </div>
-            </div>
-
             <!-- Categories Filter -->
             <div class="flex items-center space-x-2 overflow-x-auto pb-2 custom-scrollbar text-xs md:text-sm font-medium" id="categoryContainer">
                 <!-- JS will inject category buttons here -->
             </div>
 
-            <!-- Treatment List Cards (Grouped by Categories in 2 Columns) -->
+            <!-- Treatment List Cards -->
             <div class="space-y-6" id="procedureCardsContainer">
-                <!-- JS will inject categorized procedure cards here -->
+                <div class="text-center py-12 text-muji-400">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-muji-matcha"></i>
+                    <p class="text-sm">กำลังโหลดข้อมูลหัตถการจาก Google Sheets...</p>
+                </div>
             </div>
         </section>
 
@@ -153,15 +136,13 @@
                         <i class="fa-solid fa-receipt text-muji-matcha"></i>
                         รายการที่เลือก
                     </h3>
-                    <button onclick="resetCart()" class="text-xs md:text-sm text-muji-400 hover:text-rose-500 transition-colors">
+                    <button onclick="resetCart()" class="text-xs md:text-sm text-muji-400 hover:text-rose-500 transition-colors cursor-pointer">
                         <i class="fa-solid fa-rotate-right mr-1"></i>ล้างทั้งหมด
                     </button>
                 </div>
 
                 <!-- Cart Items List -->
-                <div id="cartItemsContainer" class="py-3.5 space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar">
-                    <!-- JS will inject cart items or empty state -->
-                </div>
+                <div id="cartItemsContainer" class="py-3.5 space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar"></div>
 
                 <!-- Applied Bundles Notification -->
                 <div id="appliedBundlesContainer" class="hidden my-3 p-3 bg-muji-matchaLight rounded-xl border border-muji-matcha/20 text-xs md:text-sm text-muji-matchaDark space-y-1.5">
@@ -188,12 +169,10 @@
                     </div>
                 </div>
 
-                <!-- Notes / Information -->
                 <p class="text-xs text-muji-400 mt-3.5 leading-relaxed bg-muji-50 p-3 rounded-xl border border-muji-100">
                     * ราคาข้างต้นเป็นเพียงการประมาณการเบื้องต้น การรักษาจริงขึ้นอยู่กับการประเมินของแพทย์ผู้เชี่ยวชาญ
                 </p>
 
-                <!-- Action Button -->
                 <button onclick="generateSummaryModal()" id="checkoutBtn" disabled class="w-full mt-4 bg-muji-matcha hover:bg-muji-matchaDark disabled:bg-slate-200 disabled:text-slate-400 text-white font-medium py-3.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center space-x-2 text-sm md:text-base cursor-pointer disabled:cursor-not-allowed">
                     <i class="fa-solid fa-camera"></i>
                     <span>สรุปรายการ (แคปรูปส่ง LINE)</span>
@@ -211,7 +190,7 @@
         </div>
         <button onclick="scrollToSummary()" class="bg-muji-matcha hover:bg-muji-matchaDark text-white px-4 py-2.5 rounded-xl font-medium text-xs md:text-sm transition-colors flex items-center space-x-2 cursor-pointer shadow-sm">
             <i class="fa-solid fa-arrow-down"></i>
-            <span>ไปที่ล่างสุด</span>
+            <span>ดูสรุปด้านล่าง</span>
         </button>
     </div>
 
@@ -220,17 +199,16 @@
         <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-4 md:p-5 shadow-2xl">
             <div class="flex justify-between items-center mb-3.5">
                 <h4 class="font-bold text-muji-dark text-sm md:text-base">ตัวอย่างรูปภาพใบสรุปรายการ</h4>
-                <button onclick="closeModal()" class="text-muji-400 hover:text-muji-dark p-1">
+                <button onclick="closeModal()" class="text-muji-400 hover:text-muji-dark p-1 cursor-pointer">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
 
             <!-- CARD CONTENT FOR CANVAS CAPTURE -->
             <div id="captureCard" class="bg-[#fbf9f5] p-5 md:p-6 rounded-2xl border border-muji-200 text-muji-dark space-y-4">
-                <!-- Card Header -->
                 <div class="text-center pb-3 border-b border-muji-200 relative">
-                    <div class="inline-flex p-2.5 bg-muji-matcha/10 rounded-full text-muji-matcha mb-1.5">
-                        <i class="fa-solid fa-leaf text-2xl"></i>
+                    <div class="inline-flex w-14 h-14 rounded-full overflow-hidden shadow-sm mb-1.5 border border-muji-200">
+                        <img src="https://res.cloudinary.com/yuyprw6e/image/upload/v1792783712/LINE_OA_Profile.jpg" alt="Logo" class="w-full h-full object-cover">
                     </div>
                     <h2 class="text-lg md:text-xl font-bold text-muji-dark">DR.NANA CLINIC <span class="text-muji-matcha font-normal">×</span> GUNNA CLINIC</h2>
                     <p class="text-xs md:text-sm text-muji-500 font-medium">ใบสรุปประเมินราคาหัตถการเบื้องต้น</p>
@@ -239,24 +217,19 @@
                     </div>
                 </div>
 
-                <!-- Table List -->
                 <div class="space-y-2.5 text-xs md:text-sm">
                     <div class="flex justify-between font-semibold text-muji-400 border-b border-muji-200 pb-1 text-xs">
                         <span>รายการหัตถการ / จำนวน</span>
                         <span>ยอดรวม (บาท)</span>
                     </div>
-                    <div id="cardItemsList" class="space-y-2.5">
-                        <!-- JS Dynamic Content -->
-                    </div>
+                    <div id="cardItemsList" class="space-y-2.5"></div>
                 </div>
 
-                <!-- Applied Bundles in Card -->
                 <div id="cardBundlesBox" class="hidden p-3 bg-muji-matchaLight rounded-xl border border-muji-matcha/20 text-xs md:text-sm text-muji-matchaDark space-y-1">
                     <p class="font-semibold"><i class="fa-solid fa-circle-check text-muji-matcha"></i> ส่วนลดพิเศษที่ปรับให้:</p>
                     <ul id="cardBundlesList" class="list-disc list-inside space-y-0.5 text-xs"></ul>
                 </div>
 
-                <!-- Total Breakdown -->
                 <div class="border-t border-muji-200 pt-3 space-y-1.5 text-xs md:text-sm">
                     <div class="flex justify-between text-muji-500">
                         <span>ราคาปกติรวม</span>
@@ -272,20 +245,18 @@
                     </div>
                 </div>
 
-                <!-- Footer Info -->
                 <div class="pt-2.5 text-center text-xs text-muji-400 border-t border-dashed border-muji-200 space-y-1">
                     <p class="font-medium text-muji-dark">ส่งรูปภาพนี้ให้เจ้าหน้าที่เพื่อรับสิทธิ์โปรโมชัน</p>
                     <p class="text-muji-matcha font-semibold text-sm">LINE Official: @Team_IGN</p>
                 </div>
             </div>
 
-            <!-- Action Buttons inside Modal -->
             <div class="mt-4 flex flex-col space-y-2">
-                <button onclick="downloadCardImage()" class="w-full bg-muji-matcha hover:bg-muji-matchaDark text-white font-medium py-3 px-4 rounded-xl text-xs md:text-sm transition-colors flex items-center justify-center space-x-2 shadow-sm">
+                <button onclick="downloadCardImage()" class="w-full bg-muji-matcha hover:bg-muji-matchaDark text-white font-medium py-3 px-4 rounded-xl text-xs md:text-sm transition-colors flex items-center justify-center space-x-2 shadow-sm cursor-pointer">
                     <i class="fa-solid fa-download"></i>
                     <span>บันทึกรูปภาพ (Save Image)</span>
                 </button>
-                <button onclick="closeModal()" class="w-full bg-muji-100 hover:bg-muji-200 text-muji-dark font-medium py-2.5 px-4 rounded-xl text-xs md:text-sm transition-colors">
+                <button onclick="closeModal()" class="w-full bg-muji-100 hover:bg-muji-200 text-muji-dark font-medium py-2.5 px-4 rounded-xl text-xs md:text-sm transition-colors cursor-pointer">
                     ปิดหน้าต่าง
                 </button>
             </div>
@@ -294,285 +265,257 @@
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // Procedures Data Definition
-        const procedures = [
-            // HIFU
-            {
-                id: 'hifu',
-                name: 'HIFU',
-                category: 'HIFU',
-                unit: 'shots',
-                basePrice: 30,
-                minUnitPrice: 22,
-                hasOldPatientRate: true,
-                oldPatientNote: 'สิทธิ์ราคาคนไข้เก่า 9,700 THB / 500 shots',
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953760/Products_6.png',
-                description: '100 shots: 2,800 | 200 shots: 5,200 | 300 shots: 7,500 | 400 shots: 9,600 | 500 shots: 11,000 THB'
-            },
-            // BOTULINUM TOXIN
-            {
-                id: 'botox-neuronox',
-                name: 'Botulinum Toxin: Neuronox®',
-                category: 'Botox',
-                unit: 'units',
-                basePrice: 3990,
-                baseQty: 50,
-                minUnitPrice: 70,
-                hasOldPatientRate: true,
-                oldPatientNote: 'สิทธิ์ราคาคนไข้เก่า (50 units: 3,500 | 100 units: 6,890 THB)',
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953761/Products_22.png',
-                description: '50 units: 3,990 | 100 units: 7,500 | 200 units: 14,000 THB'
-            },
-            {
-                id: 'botox-xeomin',
-                name: 'Botulinum Toxin: Xeomin® (German)',
-                category: 'Botox',
-                unit: 'units',
-                basePrice: 8000,
-                baseQty: 50,
-                minUnitPrice: 120,
-                hasOldPatientRate: true,
-                oldPatientNote: 'สิทธิ์ราคาคนไข้เก่า (50 units: 6,000 | 100 units: 12,000 THB)',
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953759/Products_3.png',
-                description: '50 units: 8,000 | 100 units: 14,900 THB'
-            },
-            {
-                id: 'botox-nabota',
-                name: 'Botulinum Toxin: Nabota®',
-                category: 'Botox',
-                unit: 'units',
-                basePrice: 4390,
-                baseQty: 50,
-                minUnitPrice: 78.9,
-                hasOldPatientRate: false,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953758/Products_2.png',
-                description: '50 units: 4,390 | 100 units: 7,890 (ไม่เข้าร่วมราคาคนไข้เก่าและโปรอื่นๆ)'
-            },
-            {
-                id: 'botox-allergan',
-                name: 'Botulinum Toxin: Allergan®',
-                category: 'Botox',
-                unit: 'units',
-                basePrice: 9890,
-                baseQty: 50,
-                minUnitPrice: 179,
-                hasOldPatientRate: false,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953760/Products_18.png',
-                description: '50 units: 9,890 | 100 units: 17,900 (ไม่เข้าร่วมราคาคนไข้เก่าและโปรอื่นๆ)'
-            },
-            // FILLER
-            {
-                id: 'filler-neuramis',
-                name: 'Filler: Neuramis® Deep',
-                category: 'Filler',
-                unit: 'cc',
-                basePrice: 4900,
-                minUnitPrice: 3900,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953761/Products_9.png',
-                description: '1 cc: 4,900 THB (ลดเหลือ 3,900 THB / cc เมื่อซื้อ ≥ 3 cc)'
-            },
-            {
-                id: 'filler-royal',
-                name: 'Filler: Royal®',
-                category: 'Filler',
-                unit: 'cc',
-                basePrice: 8900,
-                minUnitPrice: 6900,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953760/Products_17.png',
-                description: '1 cc: 8,900 THB (ลดเหลือ 6,900 THB / cc เมื่อซื้อ ≥ 4 cc)'
-            },
-            {
-                id: 'filler-atiere',
-                name: 'Filler: Atiere®',
-                category: 'Filler',
-                unit: 'cc',
-                basePrice: 10900,
-                minUnitPrice: 7500,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953759/Products_16.png',
-                description: '1 cc: 10,900 THB (ลดเหลือ 7,500 THB / cc เมื่อซื้อ ≥ 4 cc)'
-            },
-            {
-                id: 'filler-definisse',
-                name: 'Filler: Definisse®',
-                category: 'Filler',
-                unit: 'cc',
-                basePrice: 14900,
-                minUnitPrice: 12000,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953760/Products_10.png',
-                description: '1 cc: 14,900 THB (ลดเหลือ 12,000 THB / cc เมื่อซื้อ ≥ 2 cc)'
-            },
-            {
-                id: 'filler-dissolve',
-                name: 'ยาสลายฟิลเลอร์',
-                category: 'Filler',
-                unit: 'cc',
-                basePrice: 1000,
-                minUnitPrice: 1000,
-                fixedPrice: true,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953760/Products_7.png',
-                description: '1 cc: 1,000 THB'
-            },
+        // =========================================================================
+        // ตั้งค่าลิงก์ GOOGLE SHEETS CSV (Publish to Web -> เลือกแต่ละแท็บเป็น CSV)
+        // หากปล่อยว่างไว้ ระบบจะใช้ข้อมูลตั้งต้น (Fallback Data) ด้านล่างโดยอัตโนมัติ
+        // =========================================================================
+        const GOOGLE_SHEETS_CONFIG = {
+            productsCsvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbXrFs1DUNziJkbbsBnH6addu3AmKF9e9rElFiWzcmUkoK690bImXRRdRN7kZ5U52DAocTat0uAHzf/pub?gid=0&single=true&output=csv',
+            tiersCsvUrl:    'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbXrFs1DUNziJkbbsBnH6addu3AmKF9e9rElFiWzcmUkoK690bImXRRdRN7kZ5U52DAocTat0uAHzf/pub?gid=0&single=true&output=csv',
+            bundlesCsvUrl:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbXrFs1DUNziJkbbsBnH6addu3AmKF9e9rElFiWzcmUkoK690bImXRRdRN7kZ5U52DAocTat0uAHzf/pub?gid=0&single=true&output=csv'
+        };
 
-            // BIOSTIMULATOR & REJUVENATION
-            {
-                id: 'sculptra',
-                name: 'Sculptra®',
-                category: 'Biostimulator',
-                unit: 'vial',
-                basePrice: 25000,
-                minUnitPrice: 22666,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953761/Products_21.png',
-                description: '1 vial: 25,000 THB (3 vials: 68,000 THB)'
-            },
-            {
-                id: 'radiesse',
-                name: 'Radiesse®',
-                category: 'Biostimulator',
-                unit: 'vial',
-                basePrice: 32000,
-                minUnitPrice: 30000,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953758/Products_13.png',
-                description: '1 vial: 32,000 THB (2 vials: 60,000 THB)'
-            },
-            {
-                id: 'juvelook',
-                name: 'Juvelook®',
-                category: 'Biostimulator',
-                unit: 'vial',
-                basePrice: 15900,
-                minUnitPrice: 14500,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792954201/bc21a947-922b-43a5-83a0-5ea63438be17.png',
-                description: '1 vial: 15,900 THB (2 vials: 29,000 THB)'
-            },
-
-            // SKIN GLOW & BRIGHT
-            {
-                id: 'skin-blink',
-                name: 'Blink',
-                category: 'Skin Glow & Bright',
-                unit: 'cc',
-                basePrice: 890,
-                minUnitPrice: 500,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953760/Products_19.png',
-                description: '1 cc: 890 THB (5 cc: 3,500 THB) | เซ็ตจับคู่ CO2 + Blink 3 cc: 1,500 THB'
-            },
-            {
-                id: 'skin-max',
-                name: 'MAX',
-                category: 'Skin Glow & Bright',
-                unit: 'ครั้ง',
-                basePrice: 1800,
-                minUnitPrice: 1566,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953759/Products_5.png',
-                description: '1 ครั้ง: 1,800 THB (3 ครั้ง: 4,700 THB)'
-            },
-            {
-                id: 'skin-hiyan',
-                name: 'Hiyan',
-                category: 'Skin Glow & Bright',
-                unit: 'ขวด',
-                basePrice: 2390,
-                minUnitPrice: 1963,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953761/Products_12.png',
-                description: '1 ขวด: 2,390 THB (3 ขวด: 5,890 THB)'
-            },
-            {
-                id: 'skin-glossy',
-                name: 'Glossy',
-                category: 'Skin Glow & Bright',
-                unit: 'cc',
-                basePrice: 1750,
-                minUnitPrice: 1190,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792954756/96dc4e5d-c0d3-46f6-808b-2baef30c31f5.png',
-                description: '1 cc: 1,750 | 5 cc: 6,690 | 10 cc: 11,900 THB'
-            },
-            {
-                id: 'vitaran',
-                name: 'MESO: 2% PN Vitaran',
-                category: 'Skin Glow & Bright',
-                unit: 'cc',
-                basePrice: 4000,
-                minUnitPrice: 2500,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953761/Products_11.png',
-                description: '1 cc: 4,000 | 2 cc: 6,000 | 4 cc: 9,999 THB'
-            },
-
-            // FAT
-            {
-                id: 'fat-neobella',
-                name: 'Neobella®',
-                category: 'Fat',
-                unit: 'ขวด',
-                basePrice: 3690,
-                minUnitPrice: 3066,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953759/Products_1.png',
-                description: '1 ขวด: 3,690 THB (3 ขวด: 9,200 THB)'
-            },
-
-            // IV DRIP
-            {
-                id: 'iv-white',
-                name: 'IV Drip: White Radiant',
-                category: 'IV Drip',
-                unit: 'ครั้ง',
-                basePrice: 1590,
-                minUnitPrice: 1450,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953759/Products_15.png',
-                description: '1 ครั้ง: 1,590 | 5 ครั้ง: 7,750 | 10 ครั้ง: 14,500 THB (ลด 15% เมื่อทำคู่หัตถการอื่น)'
-            },
-            {
-                id: 'iv-signature',
-                name: 'IV Drip: Signature Recipe',
-                category: 'IV Drip',
-                unit: 'ครั้ง',
-                basePrice: 2550,
-                minUnitPrice: 2100,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953759/Products_14.png',
-                description: '1 ครั้ง: 2,550 | 3 ครั้ง: 7,200 | 10 ครั้ง: 21,000 THB (ลด 15% เมื่อทำคู่หัตถการอื่น)'
-            },
-
-            // LASER & SKIN TREATMENT
-            {
-                id: 'laser-yag',
-                name: 'QS Nd:YAG (เลเซอร์หน้าใส)',
-                category: 'LASER',
-                unit: 'ครั้ง',
-                basePrice: 3000,
-                minUnitPrice: 2500,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953761/Products_20.png',
-                description: '1 ครั้ง: 3,000 | 5 ครั้ง: 14,000 | 10 ครั้ง: 26,000 THB (มีเซ็ตจับคู่คู่กับ Blink / Glossy)'
-            },
-            {
-                id: 'co2-full',
-                name: 'Fractional CO2 LASER (ทั่วหน้า)',
-                category: 'LASER',
-                unit: 'ครั้ง',
-                basePrice: 8000,
-                minUnitPrice: 4000,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953760/Products_4.png',
-                description: '1 ครั้ง: 6,000 THB (จากปกติ 8,000) | จัดเซ็ตคู่ Blink 3 cc เหลือ 4,000 THB / จัดเซ็ตคู่ Glossy เพียง 4,000 THB'
-            },
-            {
-                id: 'acne-program',
-                name: 'Acne Clear Treatment',
-                category: 'Acne',
-                unit: 'ครั้ง',
-                basePrice: 1090,
-                minUnitPrice: 890,
-                image: 'https://res.cloudinary.com/yuyprw6e/image/upload/v1792953760/Products_8.png',
-                description: '1 ครั้ง: 1,090 | 5 ครั้ง: 4,950 | 10 ครั้ง: 8,900 THB'
-            }
-        ];
+        // ข้อมูลตั้งต้น (Fallback Data) กรณียังไม่ได้เชื่อมต่อ Google Sheets
+        let tiers = [];
+        let bundles = [];
 
         // App State
-        let cart = {}; // { procedureId: quantity }
-        let isOldPatientMap = {}; // { procedureId: boolean }
+        let cart = {};
+        let isOldPatientMap = {};
         let selectedCategory = 'All';
-        let previousDiscount = 0; // Track previous discount for savings celebration trigger
+        let previousDiscount = 0;
+
+        // ฟังก์ชันโหลด CSV จาก Google Sheets (เติม timestamp ป้องกัน browser จำค่าเก่า)
+        function fetchCsvData(url) {
+            return new Promise((resolve, reject) => {
+                if (!url || url.startsWith('วางลิงก์')) {
+                    reject(new Error('ยังไม่ได้ตั้งค่า URL ของ Google Sheets'));
+                    return;
+                }
+                const cacheBusterUrl = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+                Papa.parse(cacheBusterUrl, {
+                    download: true,
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: results => resolve(results.data),
+                    error: err => reject(err)
+                });
+            });
+        }
+
+        // ฟังก์ชันแปลงแถว Bundle ให้รองรับ item1, item2, item3, item4... แบบไม่จำกัด
+        function parseBundleRow(row) {
+            if (row.items && Array.isArray(row.items)) return row;
+            const items = [];
+            let idx = 1;
+            while (row[`item${idx}_id`] !== undefined) {
+                const id = (row[`item${idx}_id`] || '').trim();
+                if (id) {
+                    items.push({
+                        id: id,
+                        qty: parseFloat(row[`item${idx}_qty`]) || 0,
+                        bundlePrice: parseFloat(row[`item${idx}_bundlePrice`]) || 0
+                    });
+                }
+                idx++;
+            }
+            return {
+                bundleName: (row.bundleName || '').trim(),
+                items: items
+            };
+        }
+
+        // โหลดข้อมูลทั้งหมดจาก Google Sheets ตอนเปิดหน้าเว็บ
+        async function initApp() {
+            const statusBadge = document.getElementById('syncStatusBadge');
+            const cardsContainer = document.getElementById('procedureCardsContainer');
+            
+            statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span><span>กำลังโหลดข้อมูล...</span>`;
+
+            try {
+                // ดึงข้อมูลทั้ง 3 แท็บพร้อมกัน
+                const [rawProducts, rawTiers, rawBundles] = await Promise.all([
+                    fetchCsvData(GOOGLE_SHEETS_CONFIG.productsCsvUrl),
+                    fetchCsvData(GOOGLE_SHEETS_CONFIG.tiersCsvUrl),
+                    fetchCsvData(GOOGLE_SHEETS_CONFIG.bundlesCsvUrl)
+                ]);
+
+                // แปลงข้อมูล Products
+                procedures = rawProducts
+                    .filter(row => row.id && String(row.active).toUpperCase() !== 'FALSE')
+                    .map(row => ({
+                        id: row.id.trim(),
+                        name: (row.name || '').trim(),
+                        category: (row.category || 'อื่นๆ').trim(),
+                        unit: (row.unit || 'ครั้ง').trim(),
+                        step: parseFloat(row.step) || 1,
+                        basePrice: parseFloat(row.basePrice) || 0,
+                        baseQtyLabel: (row.baseQtyLabel || `1 ${row.unit}`).trim(),
+                        startPriceLabel: parseFloat(row.startPriceLabel) || parseFloat(row.basePrice) || 0,
+                        hasOldPatient: String(row.hasOldPatient).toUpperCase() === 'TRUE',
+                        oldPatientNote: (row.oldPatientNote || 'สิทธิ์คนไข้เก่า (คุ้มสุด)').trim(),
+                        image: (row.image || '').trim(),
+                        description: (row.description || '').trim()
+                    }));
+
+                // แปลงข้อมูล Tiers
+                tiers = rawTiers
+                    .filter(row => row.productId)
+                    .map(row => ({
+                        productId: row.productId.trim(),
+                        isOldPatient: String(row.isOldPatient).toUpperCase() === 'TRUE',
+                        minQty: parseFloat(row.minQty) || 1,
+                        unitPrice: parseFloat(row.unitPrice) || 0,
+                        note: (row.note || '').trim()
+                    }));
+
+                // แปลงข้อมูล Bundles
+                bundles = rawBundles
+                    .filter(row => row.bundleName)
+                    .map(parseBundleRow);
+
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>อัปเดตล่าสุดจาก Sheets</span>`;
+
+                renderCategories();
+                renderProcedureCards();
+                updateCartUI();
+
+            } catch (error) {
+                console.error("Error loading Google Sheets data:", error);
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span><span>เชื่อมต่อ Sheets ไม่สำเร็จ</span>`;
+                cardsContainer.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 border border-rose-200 text-center space-y-2">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-500"></i>
+                        <h3 class="font-bold text-muji-dark">ไม่สามารถโหลดข้อมูลจาก Google Sheets ได้</h3>
+                        <p class="text-xs text-muji-500">กรุณาตรวจสอบว่าได้นำลิงก์ CSV ทั้ง 3 แท็บมาใส่ใน GOOGLE_SHEETS_CONFIG และตั้งค่า "เผยแพร่ไปยังเว็บ (Publish to web)" เรียบร้อยแล้ว</p>
+                    </div>
+                `;
+            }
+        }
+
+        // ฟังก์ชันคำนวณราคาเดี่ยวตามตาราง Tiers
+        function calculateSingleItemPrice(id, qty, isOld) {
+            const item = procedures.find(p => p.id === id);
+            if (!item || qty <= 0) return { price: 0, note: '' };
+
+            const applicableTiers = tiers
+                .filter(t => t.productId === id && t.isOldPatient === isOld && qty >= t.minQty)
+                .sort((a, b) => b.minQty - a.minQty);
+
+            if (applicableTiers.length > 0) {
+                const bestTier = applicableTiers[0];
+                return {
+                    price: qty * bestTier.unitPrice,
+                    note: bestTier.note
+                };
+            }
+
+            return {
+                price: qty * item.basePrice,
+                note: isOld ? 'ใช้สิทธิ์คนไข้เก่า' : ''
+            };
+        }
+
+        // --- CALCULATION CORE (รองรับ Dynamic Tiers & Dynamic Bundles ไม่จำกัด item) ---
+        function calculateCartDetails() {
+            let items = [];
+            let subtotal = 0;
+            let appliedBundles = [];
+
+            let remainingQty = {};
+            let lockedBundleCost = {};
+
+            Object.keys(cart).forEach(id => {
+                if (cart[id] > 0) {
+                    remainingQty[id] = cart[id];
+                    lockedBundleCost[id] = 0;
+                }
+            });
+
+            const hasOtherProcedures = (targetId) => {
+                return Object.keys(cart).some(id => id !== targetId && cart[id] > 0);
+            };
+
+            // 1. ตรวจสอบและจับคู่โปรโมชัน Bundle จากตาราง Bundles ตามลำดับ (รองรับไม่จำกัดจำนวน item)
+            bundles.forEach(b => {
+                const parsedBundle = parseBundleRow(b);
+                const bundleItems = parsedBundle.items;
+                if (!bundleItems || bundleItems.length < 2) return;
+
+                // เช็กว่าสินค้าในเซ็ตไม่ได้ติ๊กใช้สิทธิ์คนไข้เก่า
+                if (bundleItems.some(bi => isOldPatientMap[bi.id])) {
+                    return;
+                }
+
+                // เช็กว่ามีจำนวนคงเหลือเพียงพอสำหรับทุก item ในเซ็ตหรือไม่
+                const hasEnough = bundleItems.every(bi => (remainingQty[bi.id] || 0) >= bi.qty && bi.qty > 0);
+
+                if (hasEnough) {
+                    const sets = Math.min(...bundleItems.map(bi => Math.floor((remainingQty[bi.id] || 0) / bi.qty)));
+
+                    if (sets > 0) {
+                        bundleItems.forEach(bi => {
+                            remainingQty[bi.id] -= sets * bi.qty;
+                            lockedBundleCost[bi.id] += sets * bi.bundlePrice;
+                        });
+
+                        appliedBundles.push(sets > 1 ? `${parsedBundle.bundleName} (x${sets} เซ็ต)` : parsedBundle.bundleName);
+                    }
+                }
+            });
+
+            // 2. คำนวณราคาส่วนที่เหลือจาก Bundle และรวมยอดทั้งหมด
+            Object.keys(cart).forEach(id => {
+                const totalQty = cart[id];
+                if (totalQty <= 0) return;
+
+                const item = procedures.find(p => p.id === id);
+                if (!item) return;
+
+                const isOld = isOldPatientMap[id] || false;
+                const normalItemSubtotal = totalQty * item.basePrice;
+                
+                const remQty = remainingQty[id] || 0;
+                const tierResult = calculateSingleItemPrice(id, remQty, isOld);
+                
+                let finalItemPrice = (lockedBundleCost[id] || 0) + tierResult.price;
+                let notes = [];
+
+                if (tierResult.note) notes.push(tierResult.note);
+
+                if ((id === 'iv-white' || id === 'iv-signature') && hasOtherProcedures(id)) {
+                    finalItemPrice *= 0.85;
+                    notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
+                }
+
+                subtotal += normalItemSubtotal;
+                items.push({
+                    id,
+                    name: item.name,
+                    unit: item.unit,
+                    qty: totalQty,
+                    normalSubtotal: Math.round(normalItemSubtotal),
+                    finalPrice: Math.round(finalItemPrice),
+                    isOld,
+                    notes
+                });
+            });
+
+            const grandTotal = items.reduce((sum, item) => sum + item.finalPrice, 0);
+            const totalDiscount = Math.max(0, subtotal - grandTotal);
+
+            if (totalDiscount > previousDiscount) {
+                const latestBundle = appliedBundles.length > 0 ? appliedBundles[appliedBundles.length - 1] : '';
+                const shortReason = latestBundle ? latestBundle.split('(')[0].trim() : 'รับส่วนลดโปรโมชันพิเศษ!';
+                triggerSavingsCelebration(totalDiscount, shortReason);
+            }
+            previousDiscount = totalDiscount;
+
+            return { items, subtotal: Math.round(subtotal), grandTotal, totalDiscount: Math.round(totalDiscount), appliedBundles };
+        }
 
         // Trigger Mini Fireworks & Dead-Center Floating Savings Notification
         function triggerSavingsCelebration(totalDiscount, reason) {
-            // Launch Canvas Confetti Fireworks
             try {
                 confetti({
                     particleCount: 75,
@@ -580,13 +523,10 @@
                     origin: { y: 0.5 },
                     colors: ['#7c8c62', '#c2a880', '#e8ddc8', '#a3845b', '#fbbf24']
                 });
-            } catch (e) {
-                console.log('Confetti effect error:', e);
-            }
+            } catch (e) {}
 
-            // Create Floating Toast Notification with Accumulated Total Discount centered in screen
             const container = document.getElementById('savingsToastContainer');
-            container.innerHTML = ''; // Clear previous toast
+            container.innerHTML = '';
             
             const toast = document.createElement('div');
             toast.className = 'savings-toast-anim bg-muji-dark/95 backdrop-blur-md text-white px-7 py-4 rounded-3xl shadow-2xl flex items-center gap-3.5 border-2 border-amber-400/60 z-50 whitespace-nowrap min-w-[280px] justify-center';
@@ -595,9 +535,7 @@
                     <i class="fa-solid fa-gift"></i>
                 </div>
                 <div class="flex flex-col items-start">
-                    <span class="text-xs text-amber-300 font-semibold uppercase tracking-wider">
-                        ${reason ? reason : 'ปลดล็อกส่วนลดโปรโมชัน!'}
-                    </span>
+                    <span class="text-xs text-amber-300 font-semibold uppercase tracking-wider">${reason}</span>
                     <div class="text-xs md:text-sm font-semibold">
                         ประหยัดสะสมรวมทั้งหมด <span class="text-emerald-300 font-extrabold text-lg md:text-xl drop-shadow-sm">-${totalDiscount.toLocaleString()} ฿</span>
                     </div>
@@ -606,9 +544,7 @@
 
             container.appendChild(toast);
             setTimeout(() => {
-                if (toast && toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
+                if (toast && toast.parentNode) toast.parentNode.removeChild(toast);
             }, 2800);
         }
 
@@ -634,19 +570,10 @@
             renderProcedureCards();
         }
 
-        // Helper to format starting price label
-        function getStartingPriceLabel(item) {
-            if (item.id === 'botox-neuronox') return '3,990 ฿ <span class="text-[10px] text-muji-400 font-normal">/ 50 units</span>';
-            if (item.id === 'botox-xeomin') return '8,000 ฿ <span class="text-[10px] text-muji-400 font-normal">/ 50 units</span>';
-            if (item.id === 'botox-nabota') return '4,390 ฿ <span class="text-[10px] text-muji-400 font-normal">/ 50 units</span>';
-            if (item.id === 'botox-allergan') return '9,890 ฿ <span class="text-[10px] text-muji-400 font-normal">/ 50 units</span>';
-            return `${item.basePrice.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQty ? item.baseQty + ' ' : ''}${item.unit}</span>`;
-        }
-
-        // Handle Quantity Updates
+        // Handle Quantity Updates (รองรับทศนิยม เช่น 0.5 cc)
         function updateQty(id, change) {
             const current = cart[id] || 0;
-            const newQty = Math.max(0, current + change);
+            const newQty = Math.max(0, Math.round((current + change) * 100) / 100);
             if (newQty === 0) delete cart[id];
             else cart[id] = newQty;
 
@@ -655,8 +582,8 @@
         }
 
         function setQty(id, value) {
-            const parsed = parseInt(value) || 0;
-            const newQty = Math.max(0, parsed);
+            const parsed = parseFloat(value) || 0;
+            const newQty = Math.max(0, Math.round(parsed * 100) / 100);
             if (newQty === 0) delete cart[id];
             else cart[id] = newQty;
 
@@ -670,7 +597,6 @@
             updateCartUI();
         }
 
-        // Remove single item from cart completely
         function removeItem(id) {
             delete cart[id];
             renderProcedureCards();
@@ -680,352 +606,20 @@
         function resetCart() {
             cart = {};
             isOldPatientMap = {};
+            previousDiscount = 0;
             renderProcedureCards();
             updateCartUI();
         }
 
-        // --- CALCULATION CORE ---
-        function calculateCartDetails() {
-            let items = [];
-            let subtotal = 0;
-            let appliedBundles = [];
-
-            const hasOtherProcedures = (targetId) => {
-                return Object.keys(cart).some(id => id !== targetId && cart[id] > 0);
-            };
-
-            // Calculate Base and Tiered Prices
-            Object.keys(cart).forEach(id => {
-                const qty = cart[id];
-                if (qty <= 0) return;
-
-                const item = procedures.find(p => p.id === id);
-                if (!item) return;
-
-                const isOld = isOldPatientMap[id] || false;
-                let normalItemSubtotal = 0;
-                let calculatedPrice = 0;
-                let notes = [];
-
-                if (isOld) notes.push('ใช้สิทธิ์ราคาคนไข้เก่า (คุ้มสุด)');
-
-                // Calculate Normal Base Subtotal
-                if (id === 'hifu') {
-                    // Standard base price without tier discount is 30 THB / shot
-                    normalItemSubtotal = qty * 30;
-                } else if (id === 'botox-neuronox') {
-                    // Base rate based on 50 units base price (3990 / 50 = 79.8 per unit)
-                    normalItemSubtotal = (qty / 50) * 3990;
-                } else if (id === 'botox-xeomin') {
-                    normalItemSubtotal = (qty / 50) * 8000;
-                } else if (id === 'botox-nabota') {
-                    normalItemSubtotal = (qty / 50) * 4390;
-                } else if (id === 'botox-allergan') {
-                    normalItemSubtotal = (qty / 50) * 9890;
-                } else {
-                    normalItemSubtotal = qty * item.basePrice;
-                }
-
-                // Old Patient Rate Takes Priority Over Standard Tier Rates
-                if (isOld) {
-                    if (id === 'hifu') {
-                        if (qty >= 500) calculatedPrice = (qty / 500) * 9700;
-                        else if (qty >= 400) calculatedPrice = 9600 + (qty - 400) * 24;
-                        else if (qty >= 300) calculatedPrice = 7500 + (qty - 300) * 25;
-                        else if (qty >= 200) calculatedPrice = 5200 + (qty - 200) * 26;
-                        else calculatedPrice = qty * 28;
-                    } else if (id === 'botox-neuronox') {
-                        if (qty >= 200) calculatedPrice = (qty / 200) * 13780;
-                        else if (qty >= 100) calculatedPrice = (qty / 100) * 6890;
-                        else calculatedPrice = (qty / 50) * 3500;
-                    } else if (id === 'botox-xeomin') {
-                        calculatedPrice = qty >= 100 ? (qty / 100) * 12000 : (qty / 50) * 6000;
-                    } else {
-                        calculatedPrice = normalItemSubtotal;
-                    }
-                } else {
-                    // Standard Pricing rules per item
-                    if (id === 'hifu') {
-                        if (qty >= 500) calculatedPrice = (qty / 500) * 11000;
-                        else if (qty >= 400) calculatedPrice = 9600 + (qty - 400) * 24;
-                        else if (qty >= 300) calculatedPrice = 7500 + (qty - 300) * 25;
-                        else if (qty >= 200) calculatedPrice = 5200 + (qty - 200) * 26;
-                        else if (qty >= 100) calculatedPrice = 2800 + (qty - 100) * 28;
-                        else calculatedPrice = qty * 30;
-                    }
-                    else if (id === 'botox-neuronox') {
-                        calculatedPrice = normalItemSubtotal;
-                    }
-                    else if (id === 'botox-xeomin') {
-                        calculatedPrice = normalItemSubtotal;
-                    }
-                    else if (id === 'botox-nabota') {
-                        calculatedPrice = normalItemSubtotal;
-                    }
-                    else if (id === 'botox-allergan') {
-                        calculatedPrice = normalItemSubtotal;
-                    }
-                    else if (id === 'filler-neuramis') {
-                        let rate = (qty >= 3) ? 3900 : 4900;
-                        calculatedPrice = qty * rate;
-                        if (qty >= 3) notes.push('โปรซื้อ ≥ 3 cc เหลือ 3,900 THB / cc');
-                    }
-                    else if (id === 'filler-royal') {
-                        let rate = (qty >= 4) ? 6900 : 8900;
-                        calculatedPrice = qty * rate;
-                        if (qty >= 4) notes.push('โปรซื้อ ≥ 4 cc เหลือ 6,900 THB / cc');
-                    }
-                    else if (id === 'filler-atiere') {
-                        let rate = (qty >= 4) ? 7500 : 10900;
-                        calculatedPrice = qty * rate;
-                        if (qty >= 4) notes.push('โปรซื้อ ≥ 4 cc เหลือ 7,500 THB / cc');
-                    }
-                    else if (id === 'filler-definisse') {
-                        let rate = (qty >= 2) ? 12000 : 14900;
-                        calculatedPrice = qty * rate;
-                        if (qty >= 2) notes.push('โปรซื้อ ≥ 2 cc เหลือ 12,000 THB / cc');
-                    }
-                    else if (id === 'sculptra') {
-                        calculatedPrice = (qty >= 3) ? (qty / 3) * 68000 : qty * 25000;
-                    }
-                    else if (id === 'radiesse') {
-                        calculatedPrice = (qty >= 2) ? (qty / 2) * 60000 : qty * 32000;
-                    }
-                    else if (id === 'juvelook') {
-                        calculatedPrice = (qty >= 2) ? (qty / 2) * 29000 : qty * 15900;
-                    }
-                    else if (id === 'skin-blink') {
-                        calculatedPrice = (qty >= 5) ? (qty / 5) * 3500 : qty * 890;
-                    }
-                    else if (id === 'skin-max') {
-                        calculatedPrice = (qty >= 3) ? (qty / 3) * 4700 : qty * 1800;
-                    }
-                    else if (id === 'skin-hiyan') {
-                        calculatedPrice = (qty >= 3) ? (qty / 3) * 5890 : qty * 2390;
-                    }
-                    else if (id === 'skin-glossy') {
-                        if (qty >= 10) calculatedPrice = (qty / 10) * 11900;
-                        else if (qty >= 5) calculatedPrice = (qty / 5) * 6690;
-                        else calculatedPrice = qty * 1750;
-                    }
-                    else if (id === 'vitaran') {
-                        if (qty >= 4) calculatedPrice = (qty / 4) * 9999;
-                        else if (qty >= 2) calculatedPrice = (qty / 2) * 6000;
-                        else calculatedPrice = qty * 4000;
-                    }
-                    else if (id === 'fat-neobella') {
-                        calculatedPrice = (qty >= 3) ? (qty / 3) * 9200 : qty * 3690;
-                    }
-                    else if (id === 'iv-white') {
-                        calculatedPrice = qty >= 10 ? (qty / 10) * 14500 : (qty >= 5 ? (qty / 5) * 7750 : qty * 1590);
-                        if (hasOtherProcedures('iv-white')) {
-                            calculatedPrice *= 0.85;
-                            notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
-                        }
-                    }
-                    else if (id === 'iv-signature') {
-                        calculatedPrice = qty >= 10 ? (qty / 10) * 21000 : (qty >= 3 ? (qty / 3) * 7200 : qty * 2550);
-                        if (hasOtherProcedures('iv-signature')) {
-                            calculatedPrice *= 0.85;
-                            notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
-                        }
-                    }
-                    else if (id === 'laser-yag') {
-                        if (qty >= 10) calculatedPrice = (qty / 10) * 26000;
-                        else if (qty >= 5) calculatedPrice = (qty / 5) * 14000;
-                        else calculatedPrice = qty * 3000;
-                    }
-                    else if (id === 'co2-full') {
-                        calculatedPrice = qty * 6000;
-                    }
-                    else if (id === 'acne-program') {
-                        if (qty >= 10) calculatedPrice = (qty / 10) * 8900;
-                        else if (qty >= 5) calculatedPrice = (qty / 5) * 4950;
-                        else calculatedPrice = qty * 1090;
-                    }
-                    else {
-                        calculatedPrice = normalItemSubtotal;
-                    }
-                }
-
-                subtotal += normalItemSubtotal;
-                items.push({
-                    id,
-                    name: item.name,
-                    unit: item.unit,
-                    qty,
-                    basePrice: item.basePrice,
-                    normalSubtotal: normalItemSubtotal,
-                    finalPrice: Math.round(calculatedPrice),
-                    isOld,
-                    notes
-                });
-            });
-
-            // SPECIAL CROSS-CATEGORY BUNDLE OVERRIDES (Only apply if Old Patient rate is NOT active)
-            const findItem = (id) => items.find(i => i.id === id);
-
-            // BUNDLE 1: HIFU 500 shots + Neuronox 50 units = 9,890 + 3,690
-            const hifuItem = findItem('hifu');
-            const neuronoxItem = findItem('botox-neuronox');
-
-            if (hifuItem && neuronoxItem && !hifuItem.isOld && !neuronoxItem.isOld) {
-                if (cart['hifu'] >= 500 && cart['botox-neuronox'] >= 50) {
-                    const bundleCount = Math.min(Math.floor(cart['hifu'] / 500), Math.floor(cart['botox-neuronox'] / 50));
-                    
-                    const remHifu = cart['hifu'] - (bundleCount * 500);
-                    let remHifuPrice = 0;
-                    if (remHifu >= 500) remHifuPrice = (remHifu / 500) * 11000;
-                    else if (remHifu >= 400) remHifuPrice = 9600 + (remHifu - 400) * 24;
-                    else if (remHifu >= 300) remHifuPrice = 7500 + (remHifu - 300) * 25;
-                    else if (remHifu >= 200) remHifuPrice = 5200 + (remHifu - 200) * 26;
-                    else if (remHifu >= 100) remHifuPrice = 2800 + (remHifu - 100) * 28;
-                    else remHifuPrice = remHifu * 30;
-
-                    const remBotox = cart['botox-neuronox'] - (bundleCount * 50);
-                    let remBotoxPrice = 0;
-                    if (remBotox >= 200) remBotoxPrice = (remBotox / 200) * 14000;
-                    else if (remBotox >= 100) remBotoxPrice = (remBotox / 100) * 7500;
-                    else if (remBotox >= 50) remBotoxPrice = (remBotox / 50) * 3990;
-                    else remBotoxPrice = remBotox * (3990 / 50);
-
-                    hifuItem.finalPrice = (bundleCount * 9890) + remHifuPrice;
-                    neuronoxItem.finalPrice = (bundleCount * 3690) + remBotoxPrice;
-                    appliedBundles.push(`Set HIFU 500 shots + Neuronox 50 units (ราคาพิเศษ 9,890 + 3,690 THB)`);
-                }
-            }
-
-            // BUNDLE 2: Fractional CO2 ทั่วหน้า (1) + Blink (3 cc) = 4,000 + 1,500
-            if (cart['co2-full'] >= 1 && cart['skin-blink'] >= 3) {
-                const co2 = findItem('co2-full');
-                const blink = findItem('skin-blink');
-                if (co2 && blink) {
-                    const bundleCount = Math.min(Math.floor(cart['co2-full']), Math.floor(cart['skin-blink'] / 3));
-                    co2.finalPrice = (bundleCount * 4000) + ((cart['co2-full'] - bundleCount) * 6000);
-                    
-                    const remBlink = cart['skin-blink'] - (bundleCount * 3);
-                    let remBlinkPrice = 0;
-                    if (remBlink >= 5) remBlinkPrice = (remBlink / 5) * 3500;
-                    else remBlinkPrice = remBlink * 890;
-
-                    blink.finalPrice = (bundleCount * 1500) + remBlinkPrice;
-                    appliedBundles.push(`Set Fractional CO2 ทั่วหน้า + Blink 3 cc (ราคาพิเศษ 4,000 + 1,500 THB)`);
-                }
-            }
-            // BUNDLE 3: Fractional CO2 ทั่วหน้า + Glossy 3 cc
-            else if (cart['co2-full'] >= 1 && cart['skin-glossy'] >= 3) {
-                const co2 = findItem('co2-full');
-                const glossy = findItem('skin-glossy');
-                if (co2 && glossy) {
-                    co2.finalPrice = 4000;
-                    glossy.finalPrice = 4120;
-                    appliedBundles.push('Set Fractional CO2 ทั่วหน้า + Glossy (ราคาพิเศษ 4,000 + 4,120 THB)');
-                }
-            }
-
-            // BUNDLE 4: LASER Nd:YAG Combos (Check highest value combination down to lower ones)
-            const yagItem = findItem('laser-yag');
-            const blinkItem = findItem('skin-blink');
-            const glossyItem = findItem('skin-glossy');
-
-            if (yagItem && !yagItem.isOld) {
-                const yagQty = cart['laser-yag'] || 0;
-                const blinkQty = cart['skin-blink'] || 0;
-                const glossyQty = cart['skin-glossy'] || 0;
-
-                // Option D: Nd:YAG 1 + Glossy 3 cc + Blink 2 cc = 2,500 + 3,990 + 1,000
-                if (yagQty >= 1 && glossyQty >= 3 && blinkQty >= 2) {
-                    const bundleCount = Math.min(Math.floor(yagQty), Math.floor(glossyQty / 3), Math.floor(blinkQty / 2));
-                    if (bundleCount > 0) {
-                        const remYag = yagQty - bundleCount;
-                        let remYagPrice = remYag >= 10 ? (remYag / 10) * 26000 : (remYag >= 5 ? (remYag / 5) * 14000 : remYag * 3000);
-                        yagItem.finalPrice = (bundleCount * 2500) + remYagPrice;
-
-                        const remGlossy = glossyQty - (bundleCount * 3);
-                        let remGlossyPrice = remGlossy >= 10 ? (remGlossy / 10) * 11900 : (remGlossy >= 5 ? (remGlossy / 5) * 6690 : remGlossy * 1750);
-                        if (glossyItem) glossyItem.finalPrice = (bundleCount * 3990) + remGlossyPrice;
-
-                        const remBlink = blinkQty - (bundleCount * 2);
-                        let remBlinkPrice = remBlink >= 5 ? (remBlink / 5) * 3500 : remBlink * 890;
-                        if (blinkItem) blinkItem.finalPrice = (bundleCount * 1000) + remBlinkPrice;
-
-                        appliedBundles.push(`Set Nd:YAG + Glossy 3 cc + Blink 2 cc (ราคาพิเศษ 2,500 + 3,990 + 1,000 THB)`);
-                    }
-                }
-                // Option C: Nd:YAG 1 + Glossy 3 cc = 2,500 + 4,100
-                else if (yagQty >= 1 && glossyQty >= 3) {
-                    const bundleCount = Math.min(Math.floor(yagQty), Math.floor(glossyQty / 3));
-                    if (bundleCount > 0) {
-                        const remYag = yagQty - bundleCount;
-                        let remYagPrice = remYag >= 10 ? (remYag / 10) * 26000 : (remYag >= 5 ? (remYag / 5) * 14000 : remYag * 3000);
-                        yagItem.finalPrice = (bundleCount * 2500) + remYagPrice;
-
-                        const remGlossy = glossyQty - (bundleCount * 3);
-                        let remGlossyPrice = remGlossy >= 10 ? (remGlossy / 10) * 11900 : (remGlossy >= 5 ? (remGlossy / 5) * 6690 : remGlossy * 1750);
-                        if (glossyItem) glossyItem.finalPrice = (bundleCount * 4100) + remGlossyPrice;
-
-                        appliedBundles.push(`Set Nd:YAG + Glossy 3 cc (ราคาพิเศษ 2,500 + 4,100 THB)`);
-                    }
-                }
-                // Option B: Nd:YAG 1 + Blink 3 cc = 2,600 + 1,500
-                else if (yagQty >= 1 && blinkQty >= 3) {
-                    const bundleCount = Math.min(Math.floor(yagQty), Math.floor(blinkQty / 3));
-                    if (bundleCount > 0) {
-                        const remYag = yagQty - bundleCount;
-                        let remYagPrice = remYag >= 10 ? (remYag / 10) * 26000 : (remYag >= 5 ? (remYag / 5) * 14000 : remYag * 3000);
-                        yagItem.finalPrice = (bundleCount * 2600) + remYagPrice;
-
-                        const remBlink = blinkQty - (bundleCount * 3);
-                        let remBlinkPrice = remBlink >= 5 ? (remBlink / 5) * 3500 : remBlink * 890;
-                        if (blinkItem) blinkItem.finalPrice = (bundleCount * 1500) + remBlinkPrice;
-
-                        appliedBundles.push(`Set Nd:YAG + Blink 3 cc (ราคาพิเศษ 2,600 + 1,500 THB)`);
-                    }
-                }
-                // Option A: Nd:YAG 1 + Blink 1 cc = 2,800 + 600
-                else if (yagQty >= 1 && blinkQty >= 1) {
-                    const bundleCount = Math.min(Math.floor(yagQty), Math.floor(blinkQty));
-                    if (bundleCount > 0) {
-                        const remYag = yagQty - bundleCount;
-                        let remYagPrice = remYag >= 10 ? (remYag / 10) * 26000 : (remYag >= 5 ? (remYag / 5) * 14000 : remYag * 3000);
-                        yagItem.finalPrice = (bundleCount * 2800) + remYagPrice;
-
-                        const remBlink = blinkQty - bundleCount;
-                        let remBlinkPrice = remBlink >= 5 ? (remBlink / 5) * 3500 : remBlink * 890;
-                        if (blinkItem) blinkItem.finalPrice = (bundleCount * 600) + remBlinkPrice;
-
-                        appliedBundles.push(`Set Nd:YAG + Blink 1 cc (ราคาพิเศษ 2,800 + 600 THB)`);
-                    }
-                }
-            }
-
-            // Calculate Totals
-            let grandTotal = items.reduce((sum, item) => sum + item.finalPrice, 0);
-            let totalDiscount = subtotal - grandTotal;
-
-            // Trigger celebration when savings amount increases
-            if (totalDiscount > previousDiscount) {
-                const latestBundle = appliedBundles.length > 0 ? appliedBundles[appliedBundles.length - 1] : '';
-                const shortReason = latestBundle ? latestBundle.split('(')[0].trim() : 'รับส่วนลดโปรโมชันพิเศษ!';
-                triggerSavingsCelebration(totalDiscount, shortReason);
-            }
-            previousDiscount = totalDiscount;
-
-            return { items, subtotal, grandTotal, totalDiscount, appliedBundles };
-        }
-
-        // Render Procedures Cards grouped by Category in 2 columns
+        // Render Procedures Cards
         function renderProcedureCards() {
             const container = document.getElementById('procedureCardsContainer');
-            
-            // Get current calculated items details to reflect discounts per card dynamically
             const calculatedDetails = calculateCartDetails();
             const calculatedItemsMap = {};
             calculatedDetails.items.forEach(item => {
                 calculatedItemsMap[item.id] = item;
             });
             
-            // Extract categories based on filter selection
             const categoriesToDisplay = selectedCategory === 'All' 
                 ? [...new Set(procedures.map(p => p.category))] 
                 : [selectedCategory];
@@ -1042,7 +636,7 @@
                 const cardsHtml = categoryItems.map(item => {
                     const qty = cart[item.id] || 0;
                     const isOld = isOldPatientMap[item.id] || false;
-                    const step = item.id === 'hifu' ? 100 : (item.category === 'Botox' ? 50 : 1);
+                    const step = item.step || 1;
                     const calcItem = calculatedItemsMap[item.id];
 
                     return `
@@ -1057,11 +651,11 @@
                                     <p class="text-xs text-muji-500 leading-relaxed">${item.description}</p>
                                 </div>
                                 
-                                ${item.hasOldPatientRate ? `
+                                ${item.hasOldPatient ? `
                                     <div class="pt-1">
                                         <label class="inline-flex items-center cursor-pointer text-xs text-muji-matchaDark font-medium bg-muji-matchaLight/60 p-1.5 rounded-lg w-full">
                                             <input type="checkbox" onchange="toggleOldPatient('${item.id}')" ${isOld ? 'checked' : ''} class="rounded border-muji-300 text-muji-matcha focus:ring-muji-matcha mr-1.5 flex-shrink-0">
-                                            <span class="text-[11px] leading-tight font-semibold">สิทธิ์คนไข้เก่า (คุ้มสุด)</span>
+                                            <span class="text-[11px] leading-tight font-semibold">${item.oldPatientNote}</span>
                                         </label>
                                     </div>
                                 ` : ''}
@@ -1080,12 +674,12 @@
                                         </div>
                                     ` : `
                                         <span class="text-xs text-muji-400 font-medium">ราคาเริ่มต้น:</span>
-                                        <p class="text-xs font-bold text-muji-matcha">${getStartingPriceLabel(item)}</p>
+                                        <p class="text-xs font-bold text-muji-matcha">${item.startPriceLabel.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQtyLabel}</span></p>
                                     `}
                                 </div>
                                 <div class="flex items-center bg-muji-50 border border-muji-200 rounded-xl p-1">
                                     <button onclick="updateQty('${item.id}', -${step})" class="w-7 h-7 rounded-lg bg-white shadow-xs text-muji-dark hover:bg-muji-100 flex items-center justify-center font-bold text-xs transition-colors cursor-pointer">-</button>
-                                    <input type="number" value="${qty}" step="${step}" onchange="setQty('${item.id}', this.value)" class="w-12 text-center bg-transparent border-none text-xs font-semibold text-muji-dark focus:outline-none" min="0">
+                                    <input type="number" value="${qty}" step="any" onchange="setQty('${item.id}', this.value)" class="w-12 text-center bg-transparent border-none text-xs font-semibold text-muji-dark focus:outline-none" min="0">
                                     <button onclick="updateQty('${item.id}', ${step})" class="w-7 h-7 rounded-lg bg-white shadow-xs text-muji-dark hover:bg-muji-100 flex items-center justify-center font-bold text-xs transition-colors cursor-pointer">+</button>
                                 </div>
                             </div>
@@ -1132,11 +726,11 @@
 
             const { items, subtotal, grandTotal, totalDiscount, appliedBundles } = calculateCartDetails();
 
-            let html = items.map(item => `
+            container.innerHTML = items.map(item => `
                 <div class="bg-muji-50 p-3 rounded-xl border border-muji-100 flex items-center justify-between text-xs md:text-sm gap-2">
                     <div class="space-y-0.5 flex-grow">
                         <h5 class="font-semibold text-muji-dark">${item.name}</h5>
-                        <div class="flex items-center space-x-1.5 text-xs text-muji-500">
+                        <div class="flex flex-wrap items-center gap-1.5 text-xs text-muji-500">
                             <span class="font-medium text-muji-dark bg-muji-200/50 px-2 py-0.5 rounded text-[11px]">x ${item.qty} ${item.unit}</span>
                             ${item.notes.length > 0 ? `<span class="text-muji-matchaDark font-medium bg-muji-matchaLight px-2 py-0.5 rounded text-[11px]">${item.notes.join(', ')}</span>` : ''}
                         </div>
@@ -1153,9 +747,6 @@
                 </div>
             `).join('');
 
-            container.innerHTML = html;
-
-            // Render Bundles list
             if (appliedBundles.length > 0) {
                 bundlesList.innerHTML = appliedBundles.map(b => `<li>${b}</li>`).join('');
                 bundlesContainer.classList.remove('hidden');
@@ -1179,7 +770,7 @@
 
             const { items, subtotal, grandTotal, totalDiscount, appliedBundles } = calculateCartDetails();
 
-            let html = items.map(item => `
+            cardItemsList.innerHTML = items.map(item => `
                 <div class="flex justify-between items-start text-muji-dark">
                     <div>
                         <p class="font-medium leading-snug text-xs md:text-sm">${item.name}</p>
@@ -1189,11 +780,8 @@
                 </div>
             `).join('');
 
-            // Set Date
             const now = new Date();
             document.getElementById('cardDate').innerText = `วันที่: ${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.`;
-
-            cardItemsList.innerHTML = html;
 
             if (appliedBundles.length > 0) {
                 cardBundlesList.innerHTML = appliedBundles.map(b => `<li>${b}</li>`).join('');
@@ -1206,26 +794,19 @@
             document.getElementById('cardDiscount').innerText = `-${totalDiscount.toLocaleString()} ฿`;
             document.getElementById('cardTotal').innerText = `${grandTotal.toLocaleString()} ฿`;
 
-            // Open Modal
             const modal = document.getElementById('summaryModal');
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-            }, 10);
+            setTimeout(() => { modal.classList.remove('opacity-0'); }, 10);
         }
 
         function closeModal() {
             const modal = document.getElementById('summaryModal');
             modal.classList.add('opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
         }
 
-        // HTML2Canvas Capture and Download Image Function
         function downloadCardImage() {
             const captureElement = document.getElementById('captureCard');
-
             html2canvas(captureElement, {
                 scale: 2,
                 backgroundColor: '#fbf9f5',
@@ -1238,20 +819,12 @@
             });
         }
 
-        // Initialize App on Load
-        window.onload = function() {
-            renderCategories();
-            renderProcedureCards();
-            updateCartUI();
-        };
-
-        // Scroll to summary section on mobile
         function scrollToSummary() {
             const summarySection = document.querySelector('section.lg\\:col-span-5');
-            if (summarySection) {
-                summarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            if (summarySection) summarySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+
+        window.onload = initApp;
     </script>
 </body>
 </html>
