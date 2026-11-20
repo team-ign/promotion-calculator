@@ -114,12 +114,24 @@
         <!-- Left Column: Procedure List & Selector (7 Cols) -->
         <section class="lg:col-span-7 space-y-5">
             
-            <!-- Categories Filter -->
-            <div class="flex items-center space-x-2 overflow-x-auto pb-2 custom-scrollbar text-xs md:text-sm font-medium" id="categoryContainer">
-                <!-- JS will inject category buttons here -->
+            <!-- Sticky Floating Search Bar & Category Filter -->
+            <div class="sticky top-[73px] sm:top-[82px] z-20 bg-[#f7f5f0]/95 backdrop-blur-md pt-2 pb-2.5 -mx-2 px-2 space-y-2.5 border-b border-muji-200/70">
+                <!-- Search Input -->
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muji-400 text-sm"></i>
+                    <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="ค้นหาชื่อหัตถการ หรือ รายละเอียด..." class="w-full pl-10 pr-10 py-2.5 bg-white border border-muji-200 rounded-2xl text-sm text-muji-dark placeholder-muji-400 shadow-sm focus:outline-none focus:border-muji-matcha focus:ring-2 focus:ring-muji-matcha/20 transition-all">
+                    <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3.5 top-1/2 -translate-y-1/2 text-muji-400 hover:text-muji-dark p-1 cursor-pointer">
+                        <i class="fa-solid fa-circle-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Categories Filter -->
+                <div class="flex items-center space-x-2 overflow-x-auto pb-1 custom-scrollbar text-xs md:text-sm font-medium" id="categoryContainer">
+                    <!-- JS will inject category buttons here -->
+                </div>
             </div>
 
-            <!-- Treatment List Cards -->
+            <!-- Treatment List Cards (Vertical Stack of Horizontal Strips) -->
             <div class="space-y-6" id="procedureCardsContainer">
                 <div class="text-center py-12 text-muji-400">
                     <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-muji-matcha"></i>
@@ -130,7 +142,7 @@
 
         <!-- Right Column: Live Calculation Summary & Cart (5 Cols) -->
         <section class="lg:col-span-5">
-            <div class="bg-white rounded-2xl shadow-sm border border-muji-200 p-5 sticky top-20">
+            <div class="bg-white rounded-2xl shadow-sm border border-muji-200 p-5 sticky top-24">
                 <div class="flex items-center justify-between pb-3.5 border-b border-muji-100">
                     <h3 class="font-bold text-muji-dark text-base md:text-lg flex items-center gap-2">
                         <i class="fa-solid fa-receipt text-muji-matcha"></i>
@@ -283,9 +295,10 @@
         let cart = {};
         let isOldPatientMap = {};
         let selectedCategory = 'All';
+        let searchQuery = '';
         let previousDiscount = 0;
 
-        // ฟังก์ชันโหลด CSV จาก Google Sheets (เติม timestamp ป้องกัน browser จำค่าเก่า)
+        // ฟังก์ชันโหลด CSV จาก Google Sheets
         function fetchCsvData(url) {
             return new Promise((resolve, reject) => {
                 if (!url || url.startsWith('วางลิงก์')) {
@@ -303,7 +316,7 @@
             });
         }
 
-        // Helper แปลงตัวเลขที่อาจติดลูกน้ำ (Comma) ให้เป็นตัวเลขที่คำนวณได้
+        // Helper แปลงตัวเลขที่อาจติดลูกน้ำ
         function cleanNumber(val, fallback = 0) {
             if (val === undefined || val === null || val === '') return fallback;
             const num = parseFloat(String(val).replace(/,/g, '').trim());
@@ -340,14 +353,12 @@
             statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span><span>กำลังโหลดข้อมูล...</span>`;
 
             try {
-                // ดึงข้อมูลทั้ง 3 แท็บพร้อมกัน
                 const [rawProducts, rawTiers, rawBundles] = await Promise.all([
                     fetchCsvData(GOOGLE_SHEETS_CONFIG.productsCsvUrl),
                     fetchCsvData(GOOGLE_SHEETS_CONFIG.tiersCsvUrl),
                     fetchCsvData(GOOGLE_SHEETS_CONFIG.bundlesCsvUrl)
                 ]);
 
-                // แปลงข้อมูล Products
                 procedures = rawProducts
                     .filter(row => row.id && String(row.active).trim().toUpperCase() !== 'FALSE')
                     .map(row => ({
@@ -365,7 +376,6 @@
                         description: String(row.description || '').trim()
                     }));
 
-                // แปลงข้อมูล Tiers
                 tiers = rawTiers
                     .filter(row => row.productId)
                     .map(row => ({
@@ -376,7 +386,6 @@
                         note: String(row.note || '').trim()
                     }));
 
-                // แปลงข้อมูล Bundles
                 bundles = rawBundles
                     .filter(row => row.bundleName)
                     .map(parseBundleRow);
@@ -426,7 +435,7 @@
             };
         }
 
-        // --- CALCULATION CORE (รองรับ Dynamic Tiers & Dynamic Bundles ไม่จำกัด item) ---
+        // --- CALCULATION CORE ---
         function calculateCartDetails() {
             let items = [];
             let subtotal = 0;
@@ -452,12 +461,10 @@
                 const bundleItems = parsedBundle.items;
                 if (!bundleItems || bundleItems.length < 2) return;
 
-                // เช็กว่าสินค้าในเซ็ตไม่ได้ติ๊กใช้สิทธิ์คนไข้เก่า
                 if (bundleItems.some(bi => isOldPatientMap[bi.id])) {
                     return;
                 }
 
-                // เช็กว่ามีจำนวนคงเหลือเพียงพอสำหรับทุก item ในเซ็ตหรือไม่
                 const hasEnough = bundleItems.every(bi => (remainingQty[bi.id] || 0) >= bi.qty && bi.qty > 0);
 
                 if (hasEnough) {
@@ -580,6 +587,23 @@
             renderProcedureCards();
         }
 
+        // Handle Search Input
+        function handleSearch(val) {
+            searchQuery = val.trim().toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) {
+                if (searchQuery.length > 0) clearBtn.classList.remove('hidden');
+                else clearBtn.classList.add('hidden');
+            }
+            renderProcedureCards();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('searchInput');
+            if (input) input.value = '';
+            handleSearch('');
+        }
+
         // Handle Quantity Updates (รองรับทศนิยม เช่น 0.5 cc)
         function updateQty(id, change) {
             const current = cart[id] || 0;
@@ -621,7 +645,7 @@
             updateCartUI();
         }
 
-        // Render Procedures Cards
+        // Render Procedures Cards (Horizontal Strip Layout Stacked Vertically)
         function renderProcedureCards() {
             const container = document.getElementById('procedureCardsContainer');
             const calculatedDetails = calculateCartDetails();
@@ -629,18 +653,32 @@
             calculatedDetails.items.forEach(item => {
                 calculatedItemsMap[item.id] = item;
             });
+
+            // Filter by search query
+            const filteredProcedures = procedures.filter(p => {
+                if (!searchQuery) return true;
+                return p.name.toLowerCase().includes(searchQuery) || 
+                       p.description.toLowerCase().includes(searchQuery) || 
+                       p.category.toLowerCase().includes(searchQuery);
+            });
             
             const categoriesToDisplay = selectedCategory === 'All' 
-                ? [...new Set(procedures.map(p => p.category))] 
+                ? [...new Set(filteredProcedures.map(p => p.category))] 
                 : [selectedCategory];
 
-            if (categoriesToDisplay.length === 0) {
-                container.innerHTML = `<p class="text-center text-muji-400 py-8">ไม่พบรายการหัตถการ</p>`;
+            if (filteredProcedures.length === 0 || categoriesToDisplay.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 border border-muji-200 text-center space-y-2">
+                        <i class="fa-solid fa-magnifying-glass text-2xl text-muji-300"></i>
+                        <p class="text-sm text-muji-500">ไม่พบรายการหัตถการที่ค้นหา "${searchQuery}"</p>
+                        ${searchQuery ? `<button onclick="clearSearch()" class="mt-2 px-3.5 py-1.5 bg-muji-100 hover:bg-muji-200 text-muji-dark rounded-xl text-xs font-medium cursor-pointer">ล้างคำค้นหา</button>` : ''}
+                    </div>
+                `;
                 return;
             }
 
             container.innerHTML = categoriesToDisplay.map(category => {
-                const categoryItems = procedures.filter(p => p.category === category);
+                const categoryItems = filteredProcedures.filter(p => p.category === category);
                 if (categoryItems.length === 0) return '';
 
                 const cardsHtml = categoryItems.map(item => {
@@ -650,43 +688,46 @@
                     const calcItem = calculatedItemsMap[item.id];
 
                     return `
-                        <div class="bg-white rounded-2xl p-4 border border-muji-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-full">
-                            <div class="space-y-3">
-                                <div class="relative overflow-hidden rounded-xl bg-muji-50 h-32 w-full">
-                                    <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/300x200/f5f0e6/3d3226?text=Clinic+Procedure'">
-                                    <span class="absolute top-2 left-2 text-[10px] font-semibold bg-white/90 backdrop-blur-xs text-muji-dark px-2.5 py-1 rounded-full shadow-xs">${item.unit}</span>
-                                </div>
-                                <div class="space-y-1">
-                                    <h4 class="font-bold text-muji-dark text-sm md:text-base leading-snug">${item.name}</h4>
-                                    <p class="text-xs text-muji-500 leading-relaxed">${item.description}</p>
+                        <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-muji-200 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5">
+                            <!-- Left: Thumbnail & Details -->
+                            <div class="flex items-start sm:items-center gap-3.5 flex-grow min-w-0">
+                                <div class="relative overflow-hidden rounded-xl bg-muji-50 w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 border border-muji-100">
+                                    <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/300x200/f5f0e6/3d3226?text=Clinic'">
+                                    <span class="absolute bottom-1 left-1 text-[9px] font-semibold bg-white/95 backdrop-blur-xs text-muji-dark px-2 py-0.5 rounded-full shadow-xs">${item.unit}</span>
                                 </div>
                                 
-                                ${item.hasOldPatient ? `
-                                    <div class="pt-1">
-                                        <label class="inline-flex items-center cursor-pointer text-xs text-muji-matchaDark font-medium bg-muji-matchaLight/60 p-1.5 rounded-lg w-full">
-                                            <input type="checkbox" onchange="toggleOldPatient('${item.id}')" ${isOld ? 'checked' : ''} class="rounded border-muji-300 text-muji-matcha focus:ring-muji-matcha mr-1.5 flex-shrink-0">
-                                            <span class="text-[11px] leading-tight font-semibold">${item.oldPatientNote}</span>
-                                        </label>
-                                    </div>
-                                ` : ''}
+                                <div class="space-y-1 flex-grow min-w-0">
+                                    <h4 class="font-bold text-muji-dark text-sm md:text-base leading-snug">${item.name}</h4>
+                                    <p class="text-xs text-muji-500 leading-relaxed">${item.description}</p>
+                                    
+                                    ${item.hasOldPatient ? `
+                                        <div class="pt-1">
+                                            <label class="inline-flex items-center cursor-pointer text-xs text-muji-matchaDark font-medium bg-muji-matchaLight/70 px-2.5 py-1 rounded-lg">
+                                                <input type="checkbox" onchange="toggleOldPatient('${item.id}')" ${isOld ? 'checked' : ''} class="rounded border-muji-300 text-muji-matcha focus:ring-muji-matcha mr-1.5 flex-shrink-0">
+                                                <span class="text-[11px] leading-tight font-semibold">${item.oldPatientNote}</span>
+                                            </label>
+                                        </div>
+                                    ` : ''}
+                                </div>
                             </div>
 
-                            <!-- Quantity Selector Controls & Calculated Item Price -->
-                            <div class="flex items-center justify-between pt-3 mt-3 border-t border-muji-100">
-                                <div class="space-y-0.5">
+                            <!-- Right: Price & Quantity Controls -->
+                            <div class="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center pt-2.5 sm:pt-0 sm:pl-3 border-t sm:border-t-0 sm:border-l border-muji-100 flex-shrink-0 gap-2">
+                                <div class="text-left sm:text-right">
                                     ${qty > 0 && calcItem ? `
-                                        <span class="text-[11px] text-muji-400 font-medium">ราคารวม (${qty} ${item.unit}):</span>
-                                        <div class="flex flex-col">
+                                        <span class="text-[11px] text-muji-400 font-medium block">รวม (${qty} ${item.unit}):</span>
+                                        <div class="flex items-baseline sm:justify-end gap-1.5">
                                             ${calcItem.finalPrice < calcItem.normalSubtotal ? `
-                                                <span class="text-[11px] text-muji-400 line-through leading-none">${calcItem.normalSubtotal.toLocaleString()} ฿</span>
+                                                <span class="text-[11px] text-muji-400 line-through">${calcItem.normalSubtotal.toLocaleString()} ฿</span>
                                             ` : ''}
-                                            <p class="text-xs font-bold text-muji-matcha">${calcItem.finalPrice.toLocaleString()} ฿</p>
+                                            <p class="text-sm font-bold text-muji-matcha">${calcItem.finalPrice.toLocaleString()} ฿</p>
                                         </div>
                                     ` : `
-                                        <span class="text-xs text-muji-400 font-medium">ราคาเริ่มต้น:</span>
-                                        <p class="text-xs font-bold text-muji-matcha">${item.startPriceLabel.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQtyLabel}</span></p>
+                                        <span class="text-[11px] text-muji-400 font-medium block">ราคาเริ่มต้น:</span>
+                                        <p class="text-xs sm:text-sm font-bold text-muji-matcha">${item.startPriceLabel.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQtyLabel}</span></p>
                                     `}
                                 </div>
+
                                 <div class="flex items-center bg-muji-50 border border-muji-200 rounded-xl p-1">
                                     <button onclick="updateQty('${item.id}', -${step})" class="w-7 h-7 rounded-lg bg-white shadow-xs text-muji-dark hover:bg-muji-100 flex items-center justify-center font-bold text-xs transition-colors cursor-pointer">-</button>
                                     <input type="number" value="${qty}" step="any" onchange="setQty('${item.id}', this.value)" class="w-12 text-center bg-transparent border-none text-xs font-semibold text-muji-dark focus:outline-none" min="0">
@@ -698,13 +739,13 @@
                 }).join('');
 
                 return `
-                    <div class="space-y-3">
+                    <div class="space-y-2.5">
                         <div class="flex items-center space-x-2 pb-1 border-b border-muji-200">
                             <i class="fa-solid fa-leaf text-muji-matcha text-xs"></i>
                             <h3 class="font-bold text-muji-dark text-base md:text-lg">${category}</h3>
                             <span class="text-xs text-muji-400 font-normal">(${categoryItems.length} รายการ)</span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-3">
                             ${cardsHtml}
                         </div>
                     </div>
