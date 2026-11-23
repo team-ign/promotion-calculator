@@ -120,7 +120,7 @@
                 <div class="flex items-center gap-2 w-full sm:max-w-xs">
                     <input type="text" id="promoCodeInput" onkeydown="if(event.key==='Enter') applyPromoCode()" class="flex-grow px-3 py-1.5 bg-white border border-muji-200 rounded-xl text-xs text-muji-dark focus:outline-none focus:border-muji-matcha uppercase">
                     <button onclick="applyPromoCode()" class="px-3.5 py-1.5 bg-muji-matcha hover:bg-muji-matchaDark text-white rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap">
-                        ใช้โค้ด
+                        Submit
                     </button>
                     <button id="clearPromoBtn" onclick="clearPromoCode()" class="hidden px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap">
                         ยกเลิก
@@ -318,13 +318,14 @@
         let procedures = [];
         let tiers = [];
         let bundles = [];
+        let availablePromoCodes = new Set(['friendzone']); // เก็บรายชื่อโค้ดทั้งหมดที่ดึงเจอจาก Sheets
 
         // App State
         let cart = {};
         let isOldPatientMap = {};
         let selectedCategory = 'All';
         let searchQuery = '';
-        let activePromoCode = ''; // เก็บโค้ดพิเศษที่ใช้งานอยู่ เช่น 'friendzone'
+        let activePromoCode = ''; // เก็บโค้ดพิเศษที่ใช้งานอยู่ เช่น 'friendzone' หรือโค้ดอื่นๆ ในอนาคต
         let previousDiscount = 0;
 
         // ฟังก์ชันเปิด/ปิดแถบกรอกโค้ดพิเศษ
@@ -336,23 +337,29 @@
             }
         }
 
-        // ฟังก์ชันตรวจสอบและเปิดใช้งานโค้ดพิเศษ
+        // ฟังก์ชันตรวจสอบและเปิดใช้งานโค้ดพิเศษแบบ Dynamic
         function applyPromoCode() {
             const rawInput = document.getElementById('promoCodeInput').value.trim();
-            const normalized = rawInput.toLowerCase().replace(/\s+/g, '');
+            let normalized = rawInput.toLowerCase().replace(/\s+/g, '');
             const statusMsg = document.getElementById('promoStatusMsg');
             const clearBtn = document.getElementById('clearPromoBtn');
             const activeDot = document.getElementById('promoActiveDot');
 
-            if (normalized === 'friendzone' || normalized === 'เฟรนด์โซน') {
-                activePromoCode = 'friendzone';
-                statusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i>เปิดใช้งานเรทราคาพิเศษ <b>"FRIENDZONE (ราคาเพื่อน)"</b> เรียบร้อยแล้ว!`;
+            if (normalized === '') {
+                clearPromoCode();
+                return;
+            }
+
+            // รองรับคำแปลภาษาไทยของ friendzone
+            if (normalized === 'เฟรนด์โซน') normalized = 'friendzone';
+
+            // ตรวจสอบว่าโค้ดที่พิมพ์มีอยู่ในระบบ (ดึงมาจากคอลัมน์ใน Products หรือ Tiers) หรือไม่
+            if (availablePromoCodes.has(normalized)) {
+                activePromoCode = normalized;
+                statusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i>เปิดใช้งานโค้ดส่วนลด <b>"${activePromoCode.toUpperCase()}"</b> เรียบร้อยแล้ว!`;
                 statusMsg.className = 'max-w-5xl mx-auto text-[11px] mt-1.5 font-medium text-emerald-700 block';
                 clearBtn.classList.remove('hidden');
                 activeDot.classList.remove('hidden');
-            } else if (normalized === '') {
-                clearPromoCode();
-                return;
             } else {
                 activePromoCode = '';
                 statusMsg.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-500 mr-1"></i>ไม่พบโค้ดส่วนลด "${rawInput}"`;
@@ -436,34 +443,57 @@
                     fetchCsvData(GOOGLE_SHEETS_CONFIG.bundlesCsvUrl)
                 ]);
 
+                availablePromoCodes = new Set();
+
+                // แปลงข้อมูล Products และตรวจจับคอลัมน์ราคาโค้ดพิเศษอัตโนมัติ (คอลัมน์ที่ลงท้ายด้วย Price นอกเหนือจาก basePrice)
                 procedures = rawProducts
                     .filter(row => row.id && String(row.active).trim().toUpperCase() !== 'FALSE')
-                    .map(row => ({
-                        id: String(row.id).trim().toLowerCase(),
-                        name: String(row.name || '').trim(),
-                        category: String(row.category || 'อื่นๆ').trim(),
-                        unit: String(row.unit || 'ครั้ง').trim(),
-                        step: cleanNumber(row.step, 1),
-                        basePrice: cleanNumber(row.basePrice, 0),
-                        baseQtyLabel: String(row.baseQtyLabel || `1 ${row.unit || ''}`).trim(),
-                        startPriceLabel: cleanNumber(row.startPriceLabel, cleanNumber(row.basePrice, 0)),
-                        friendZonePrice: cleanNumber(row.friendZonePrice, 0), // ราคาต่อหน่วยสำหรับโค้ด FRIENDZONE
-                        hasOldPatient: String(row.hasOldPatient || '').trim().toUpperCase() === 'TRUE',
-                        oldPatientNote: String(row.oldPatientNote || 'สิทธิ์คนไข้เก่า (คุ้มสุด)').trim(),
-                        image: String(row.image || '').trim(),
-                        description: String(row.description || '').trim()
-                    }));
+                    .map(row => {
+                        const promoPrices = {};
+                        Object.keys(row).forEach(colName => {
+                            const lowerCol = colName.trim().toLowerCase();
+                            if (lowerCol.endsWith('price') && lowerCol !== 'baseprice') {
+                                const codeKey = lowerCol.replace(/price$/, ''); // เช่น friendZonePrice -> friendzone, vipPrice -> vip
+                                const priceVal = cleanNumber(row[colName], 0);
+                                if (codeKey) {
+                                    availablePromoCodes.add(codeKey);
+                                    if (priceVal > 0) promoPrices[codeKey] = priceVal;
+                                }
+                            }
+                        });
 
+                        return {
+                            id: String(row.id).trim().toLowerCase(),
+                            name: String(row.name || '').trim(),
+                            category: String(row.category || 'อื่นๆ').trim(),
+                            unit: String(row.unit || 'ครั้ง').trim(),
+                            step: cleanNumber(row.step, 1),
+                            basePrice: cleanNumber(row.basePrice, 0),
+                            baseQtyLabel: String(row.baseQtyLabel || `1 ${row.unit || ''}`).trim(),
+                            startPriceLabel: cleanNumber(row.startPriceLabel, cleanNumber(row.basePrice, 0)),
+                            promoPrices: promoPrices, // เก็บราคาของทุกโค้ด เช่น { friendzone: 18, vip: 15 }
+                            hasOldPatient: String(row.hasOldPatient || '').trim().toUpperCase() === 'TRUE',
+                            oldPatientNote: String(row.oldPatientNote || 'สิทธิ์คนไข้เก่า (คุ้มสุด)').trim(),
+                            image: String(row.image || '').trim(),
+                            description: String(row.description || '').trim()
+                        };
+                    });
+
+                // แปลงข้อมูล Tiers และบันทึกชื่อโค้ดจากคอลัมน์ promoCode
                 tiers = rawTiers
                     .filter(row => row.productId)
-                    .map(row => ({
-                        productId: String(row.productId).trim().toLowerCase(),
-                        isOldPatient: String(row.isOldPatient || '').trim().toUpperCase() === 'TRUE',
-                        promoCode: String(row.promoCode || '').trim().toLowerCase(), // รองรับเรทขั้นบันไดเฉพาะโค้ด
-                        minQty: cleanNumber(row.minQty, 1),
-                        unitPrice: cleanNumber(row.unitPrice, 0),
-                        note: String(row.note || '').trim()
-                    }));
+                    .map(row => {
+                        const pCode = String(row.promoCode || '').trim().toLowerCase();
+                        if (pCode) availablePromoCodes.add(pCode);
+                        return {
+                            productId: String(row.productId).trim().toLowerCase(),
+                            isOldPatient: String(row.isOldPatient || '').trim().toUpperCase() === 'TRUE',
+                            promoCode: pCode,
+                            minQty: cleanNumber(row.minQty, 1),
+                            unitPrice: cleanNumber(row.unitPrice, 0),
+                            note: String(row.note || '').trim()
+                        };
+                    });
 
                 bundles = rawBundles
                     .filter(row => row.bundleName)
@@ -496,23 +526,23 @@
             const item = procedures.find(p => p.id === id);
             if (!item || qty <= 0) return { price: 0, note: '' };
 
-            // 1. เช็กโค้ดพิเศษ FRIENDZONE ก่อนเป็นอันดับแรก
-            if (activePromoCode === 'friendzone') {
+            // 1. เช็กโค้ดพิเศษที่เปิดใช้งานอยู่ก่อนเป็นอันดับแรก
+            if (activePromoCode) {
                 const promoTiers = tiers
-                    .filter(t => t.productId === id && t.promoCode === 'friendzone' && qty >= t.minQty)
+                    .filter(t => t.productId === id && t.promoCode === activePromoCode && qty >= t.minQty)
                     .sort((a, b) => b.minQty - a.minQty);
 
                 if (promoTiers.length > 0) {
                     return {
                         price: qty * promoTiers[0].unitPrice,
-                        note: promoTiers[0].note || 'เรทราคา FRIENDZONE'
+                        note: promoTiers[0].note || `เรทราคา ${activePromoCode.toUpperCase()}`
                     };
                 }
 
-                if (item.friendZonePrice > 0) {
+                if (item.promoPrices && item.promoPrices[activePromoCode] > 0) {
                     return {
-                        price: qty * item.friendZonePrice,
-                        note: 'เรทราคา FRIENDZONE'
+                        price: qty * item.promoPrices[activePromoCode],
+                        note: `เรทราคา ${activePromoCode.toUpperCase()}`
                     };
                 }
             }
@@ -556,8 +586,8 @@
                 return Object.keys(cart).some(id => id !== targetId && cart[id] > 0);
             };
 
-            // 1. ตรวจสอบและจับคู่โปรโมชัน Bundle (ข้ามเมื่อใช้โค้ด FRIENDZONE)
-            if (activePromoCode !== 'friendzone') {
+            // 1. ตรวจสอบและจับคู่โปรโมชัน Bundle (ข้ามเมื่อใช้โค้ดพิเศษ)
+            if (!activePromoCode) {
                 bundles.forEach(b => {
                     const parsedBundle = parseBundleRow(b);
                     const bundleItems = parsedBundle.items;
@@ -603,7 +633,7 @@
 
                 if (tierResult.note) notes.push(tierResult.note);
 
-                if (activePromoCode !== 'friendzone' && (id === 'iv-white' || id === 'iv-signature') && hasOtherProcedures(id)) {
+                if (!activePromoCode && (id === 'iv-white' || id === 'iv-signature') && hasOtherProcedures(id)) {
                     finalItemPrice *= 0.85;
                     notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
                 }
@@ -789,13 +819,15 @@
                     const isOld = isOldPatientMap[item.id] || false;
                     const step = item.step || 1;
                     const calcItem = calculatedItemsMap[item.id];
-                    const isFriendActive = activePromoCode === 'friendzone' && item.friendZonePrice > 0;
-                    const displayStartPrice = isFriendActive 
-                        ? Math.round(item.friendZonePrice * (item.basePrice > 0 ? (item.startPriceLabel / item.basePrice) : 1))
+                    
+                    const promoUnitPrice = (activePromoCode && item.promoPrices) ? (item.promoPrices[activePromoCode] || 0) : 0;
+                    const isPromoActive = promoUnitPrice > 0;
+                    const displayStartPrice = isPromoActive 
+                        ? Math.round(promoUnitPrice * (item.basePrice > 0 ? (item.startPriceLabel / item.basePrice) : 1))
                         : item.startPriceLabel;
 
                     return `
-                        <div class="bg-white rounded-2xl p-3.5 sm:p-4 border ${isFriendActive ? 'border-amber-300 ring-1 ring-amber-200/50' : 'border-muji-200'} shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5">
+                        <div class="bg-white rounded-2xl p-3.5 sm:p-4 border ${isPromoActive ? 'border-amber-300 ring-1 ring-amber-200/50' : 'border-muji-200'} shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5">
                             <!-- Left: Thumbnail & Details -->
                             <div class="flex items-start sm:items-center gap-3.5 flex-grow min-w-0">
                                 <div class="relative overflow-hidden rounded-xl bg-muji-50 w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 border border-muji-100">
@@ -806,11 +838,11 @@
                                 <div class="space-y-1 flex-grow min-w-0">
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <h4 class="font-bold text-muji-dark text-sm md:text-base leading-snug">${item.name}</h4>
-                                        ${isFriendActive ? `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300">FRIENDZONE</span>` : ''}
+                                        ${isPromoActive ? `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300 uppercase">${activePromoCode}</span>` : ''}
                                     </div>
                                     <p class="text-xs text-muji-500 leading-relaxed">${item.description}</p>
                                     
-                                    ${item.hasOldPatient && activePromoCode !== 'friendzone' ? `
+                                    ${item.hasOldPatient && !activePromoCode ? `
                                         <div class="pt-1">
                                             <label class="inline-flex items-center cursor-pointer text-xs text-muji-matchaDark font-medium bg-muji-matchaLight/70 px-2.5 py-1 rounded-lg">
                                                 <input type="checkbox" onchange="toggleOldPatient('${item.id}')" ${isOld ? 'checked' : ''} class="rounded border-muji-300 text-muji-matcha focus:ring-muji-matcha mr-1.5 flex-shrink-0">
@@ -833,9 +865,9 @@
                                             <p class="text-sm font-bold text-muji-matcha">${calcItem.finalPrice.toLocaleString()} ฿</p>
                                         </div>
                                     ` : `
-                                        <span class="text-[11px] text-muji-400 font-medium block">${isFriendActive ? 'ราคาเพื่อนเริ่มต้น:' : 'ราคาเริ่มต้น:'}</span>
+                                        <span class="text-[11px] text-muji-400 font-medium block">${isPromoActive ? 'ราคาพิเศษเริ่มต้น:' : 'ราคาเริ่มต้น:'}</span>
                                         <div class="flex items-baseline sm:justify-end gap-1.5">
-                                            ${isFriendActive && displayStartPrice < item.startPriceLabel ? `
+                                            ${isPromoActive && displayStartPrice < item.startPriceLabel ? `
                                                 <span class="text-[11px] text-muji-400 line-through">${item.startPriceLabel.toLocaleString()} ฿</span>
                                             ` : ''}
                                             <p class="text-xs sm:text-sm font-bold text-muji-matcha">${displayStartPrice.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQtyLabel}</span></p>
@@ -950,8 +982,8 @@
             document.getElementById('cardDate').innerText = `วันที่: ${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.`;
 
             const cardPromoBadge = document.getElementById('cardPromoBadge');
-            if (activePromoCode === 'friendzone') {
-                document.getElementById('cardPromoName').innerText = 'FRIENDZONE';
+            if (activePromoCode) {
+                document.getElementById('cardPromoName').innerText = activePromoCode.toUpperCase();
                 cardPromoBadge.classList.remove('hidden');
             } else {
                 cardPromoBadge.classList.add('hidden');
