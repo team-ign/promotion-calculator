@@ -72,40 +72,40 @@
             0% { opacity: 0; transform: translate(-50%, -40%) scale(0.85); }
             15% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
             25% { transform: translate(-50%, -50%) scale(1); }
-            75% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            100% { opacity: 0; transform: translate(-50%, -60%) scale(0.9); }
-        }
-        .savings-toast-anim {
-            animation: centerFadeBounce 2.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-            pointer-events: none;
-        }
-    </style>
-</head>
-<body class="bg-[#f7f5f0] text-muji-dark min-h-screen pb-28 md:pb-16 text-base relative">
-
-    <!-- Floating Savings Toast Notification Container -->
-    <div id="savingsToastContainer" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none flex flex-col items-center"></div>
-
-    <!-- Header Section -->
-    <header class="bg-white border-b border-muji-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center shadow-sm flex-shrink-0 border border-muji-200 bg-muji-matcha">
-                    <img src="https://media.istockphoto.com/id/1206806317/vector/shopping-cart-icon-isolated-on-white-background.jpg?s=612x612&w=0&k=20&c=1RRQJs5NDhcB67necQn1WCpJX2YMfWZ4rYi1DFKlkNA=" alt="Logo" class="w-full h-full object-cover" onerror="this.style.display='none'">
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg md:text-xl leading-tight text-muji-dark">
-                        <a href="https://maps.google.com/?cid=692252098073688666&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" target="_blank" class="hover:underline">สาขาที่ทิพวัล สมุทรปราการ</a> 
-                        <span class="text-muji-matcha font-normal"> × </span><a href="https://maps.app.goo.gl/PY55jgq8uebj6QMx5" target="_blank" class="hover:underline">สาขาในห้างฯ ซีคอน ศรีนครินทร์</a>
-                    </h1>
                     <p class="text-xs md:text-sm text-muji-500 font-medium">โปรแกรมประเมินราคาหัตถการ & โปรโมชันพิเศษ<br>ส่งใบสรุปราคาได้ทาง LINE: <a href="https://lin.ee/ORvt3uE" target="_blank" class="hover:underline font-semibold text-muji-matcha">@Team_IGN</a></p>
                 </div>
             </div>
-            <!-- Data Source Indicator -->
-            <div id="syncStatusBadge" class="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-muji-50 border border-muji-200 text-muji-500">
-                <span class="w-2 h-2 rounded-full bg-muji-matcha animate-pulse"></span>
-                <span>พร้อมคำนวณ</span>
+            <!-- Data Source Indicator & Secret Promo Code Gear -->
+            <div class="flex items-center gap-2">
+                <div id="syncStatusBadge" class="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-muji-50 border border-muji-200 text-muji-500">
+                    <span class="w-2 h-2 rounded-full bg-muji-matcha animate-pulse"></span>
+                    <span>พร้อมคำนวณ</span>
+                </div>
+                <button onclick="togglePromoBar()" title="ใส่โค้ดส่วนลดพิเศษ" class="w-9 h-9 rounded-full bg-muji-50 hover:bg-muji-100 border border-muji-200 text-muji-500 hover:text-muji-dark flex items-center justify-center transition-colors cursor-pointer relative">
+                    <i class="fa-solid fa-gear text-sm"></i>
+                    <span id="promoActiveDot" class="hidden absolute top-0 right-0 w-2.5 h-2.5 bg-amber-500 border-2 border-white rounded-full"></span>
+                </button>
             </div>
+        </div>
+
+        <!-- Collapsible Secret Promo Code Bar -->
+        <div id="promoCodeBar" class="hidden bg-muji-50/95 border-t border-muji-200 px-4 py-2.5 transition-all">
+            <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                <div class="flex items-center gap-2 text-xs text-muji-600 font-medium">
+                    <i class="fa-solid fa-key text-amber-500"></i>
+                    <span>โค้ดสิทธิ์พิเศษ (Special Access Code):</span>
+                </div>
+                <div class="flex items-center gap-2 flex-grow sm:max-w-md">
+                    <input type="text" id="promoCodeInput" onkeydown="if(event.key==='Enter') applyPromoCode()" placeholder="กรอกโค้ด เช่น FRIENDZONE..." class="flex-grow px-3 py-1.5 bg-white border border-muji-200 rounded-xl text-xs text-muji-dark focus:outline-none focus:border-muji-matcha uppercase">
+                    <button onclick="applyPromoCode()" class="px-3.5 py-1.5 bg-muji-matcha hover:bg-muji-matchaDark text-white rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap">
+                        ใช้โค้ด
+                    </button>
+                    <button id="clearPromoBtn" onclick="clearPromoCode()" class="hidden px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap">
+                        ยกเลิก
+                    </button>
+                </div>
+            </div>
+            <div id="promoStatusMsg" class="max-w-5xl mx-auto text-[11px] mt-1 font-medium hidden"></div>
         </div>
     </header>
 
@@ -225,6 +225,11 @@
                     </div>
                     <h2 class="text-lg md:text-xl font-bold text-muji-dark"><span class="text-muji-matcha font-normal">LINE: </span>@Team_IGN</h2>
                     <p class="text-xs md:text-sm text-muji-500 font-medium">ใบสรุปประเมินราคาหัตถการเบื้องต้น</p>
+                    <div id="cardPromoBadge" class="hidden mt-1">
+                        <span class="inline-block bg-amber-100 text-amber-800 border border-amber-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                            <i class="fa-solid fa-star text-amber-500 mr-1"></i>สิทธิ์ราคาพิเศษ: <span id="cardPromoName"></span>
+                        </span>
+                    </div>
                     <div class="mt-1 flex items-center justify-center gap-2">
                         <span class="text-xs text-muji-400" id="cardDate"></span>
                     </div>
@@ -297,7 +302,56 @@
         let isOldPatientMap = {};
         let selectedCategory = 'All';
         let searchQuery = '';
+        let activePromoCode = ''; // เก็บโค้ดพิเศษที่ใช้งานอยู่ เช่น 'friendzone'
         let previousDiscount = 0;
+
+        // ฟังก์ชันเปิด/ปิดแถบกรอกโค้ดพิเศษ
+        function togglePromoBar() {
+            const bar = document.getElementById('promoCodeBar');
+            bar.classList.toggle('hidden');
+            if (!bar.classList.contains('hidden')) {
+                document.getElementById('promoCodeInput').focus();
+            }
+        }
+
+        // ฟังก์ชันตรวจสอบและเปิดใช้งานโค้ดพิเศษ
+        function applyPromoCode() {
+            const rawInput = document.getElementById('promoCodeInput').value.trim();
+            const normalized = rawInput.toLowerCase().replace(/\s+/g, '');
+            const statusMsg = document.getElementById('promoStatusMsg');
+            const clearBtn = document.getElementById('clearPromoBtn');
+            const activeDot = document.getElementById('promoActiveDot');
+
+            if (normalized === 'friendzone' || normalized === 'เฟรนด์โซน') {
+                activePromoCode = 'friendzone';
+                statusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i>เปิดใช้งานเรทราคาพิเศษ <b>"FRIENDZONE (ราคาเพื่อน)"</b> เรียบร้อยแล้ว!`;
+                statusMsg.className = 'max-w-5xl mx-auto text-[11px] mt-1.5 font-medium text-emerald-700 block';
+                clearBtn.classList.remove('hidden');
+                activeDot.classList.remove('hidden');
+            } else if (normalized === '') {
+                clearPromoCode();
+                return;
+            } else {
+                activePromoCode = '';
+                statusMsg.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-500 mr-1"></i>ไม่พบโค้ดส่วนลด "${rawInput}"`;
+                statusMsg.className = 'max-w-5xl mx-auto text-[11px] mt-1.5 font-medium text-rose-600 block';
+                clearBtn.classList.add('hidden');
+                activeDot.classList.add('hidden');
+            }
+
+            renderProcedureCards();
+            updateCartUI();
+        }
+
+        function clearPromoCode() {
+            activePromoCode = '';
+            document.getElementById('promoCodeInput').value = '';
+            document.getElementById('promoStatusMsg').classList.add('hidden');
+            document.getElementById('clearPromoBtn').classList.add('hidden');
+            document.getElementById('promoActiveDot').classList.add('hidden');
+            renderProcedureCards();
+            updateCartUI();
+        }
 
         // ฟังก์ชันโหลด CSV จาก Google Sheets
         function fetchCsvData(url) {
@@ -371,6 +425,7 @@
                         basePrice: cleanNumber(row.basePrice, 0),
                         baseQtyLabel: String(row.baseQtyLabel || `1 ${row.unit || ''}`).trim(),
                         startPriceLabel: cleanNumber(row.startPriceLabel, cleanNumber(row.basePrice, 0)),
+                        friendZonePrice: cleanNumber(row.friendZonePrice, 0), // ราคาต่อหน่วยสำหรับโค้ด FRIENDZONE
                         hasOldPatient: String(row.hasOldPatient || '').trim().toUpperCase() === 'TRUE',
                         oldPatientNote: String(row.oldPatientNote || 'สิทธิ์คนไข้เก่า (คุ้มสุด)').trim(),
                         image: String(row.image || '').trim(),
@@ -382,6 +437,7 @@
                     .map(row => ({
                         productId: String(row.productId).trim().toLowerCase(),
                         isOldPatient: String(row.isOldPatient || '').trim().toUpperCase() === 'TRUE',
+                        promoCode: String(row.promoCode || '').trim().toLowerCase(), // รองรับเรทขั้นบันไดเฉพาะโค้ด
                         minQty: cleanNumber(row.minQty, 1),
                         unitPrice: cleanNumber(row.unitPrice, 0),
                         note: String(row.note || '').trim()
@@ -396,30 +452,35 @@
                 renderCategories();
                 renderProcedureCards();
                 updateCartUI();
-
-            } catch (error) {
-                console.error("Error loading Google Sheets data:", error);
-                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span><span>เชื่อมต่อ Sheets ไม่สำเร็จ</span>`;
-                cardsContainer.innerHTML = `
-                    <div class="bg-white rounded-2xl p-8 border border-rose-200 text-center space-y-2">
-                        <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-500"></i>
-                        <h3 class="font-bold text-muji-dark">ไม่สามารถโหลดข้อมูลจาก Google Sheets ได้</h3>
-                        <p class="text-xs text-muji-500">กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต หรือการตั้งค่า Publish to web ของ Google Sheets</p>
-                        <button onclick="initApp()" class="mt-3 px-4 py-2 bg-muji-matcha text-white rounded-xl text-xs font-medium hover:bg-muji-matchaDark cursor-pointer">
-                            <i class="fa-solid fa-rotate-right mr-1"></i>ลองโหลดใหม่อีกครั้ง
-                        </button>
-                    </div>
-                `;
-            }
-        }
-
-        // ฟังก์ชันคำนวณราคาเดี่ยวตามตาราง Tiers
+        // ฟังก์ชันคำนวณราคาเดี่ยวตามตาราง Tiers และโค้ดพิเศษ
         function calculateSingleItemPrice(id, qty, isOld) {
             const item = procedures.find(p => p.id === id);
             if (!item || qty <= 0) return { price: 0, note: '' };
 
+            // 1. เช็กโค้ดพิเศษ FRIENDZONE ก่อนเป็นอันดับแรก
+            if (activePromoCode === 'friendzone') {
+                const promoTiers = tiers
+                    .filter(t => t.productId === id && t.promoCode === 'friendzone' && qty >= t.minQty)
+                    .sort((a, b) => b.minQty - a.minQty);
+
+                if (promoTiers.length > 0) {
+                    return {
+                        price: qty * promoTiers[0].unitPrice,
+                        note: promoTiers[0].note || 'เรทราคา FRIENDZONE'
+                    };
+                }
+
+                if (item.friendZonePrice > 0) {
+                    return {
+                        price: qty * item.friendZonePrice,
+                        note: 'เรทราคา FRIENDZONE'
+                    };
+                }
+            }
+
+            // 2. เช็กเรทคนไข้เก่า / เรทขั้นบันไดปกติ
             const applicableTiers = tiers
-                .filter(t => t.productId === id && t.isOldPatient === isOld && qty >= t.minQty)
+                .filter(t => t.productId === id && !t.promoCode && t.isOldPatient === isOld && qty >= t.minQty)
                 .sort((a, b) => b.minQty - a.minQty);
 
             if (applicableTiers.length > 0) {
@@ -456,31 +517,33 @@
                 return Object.keys(cart).some(id => id !== targetId && cart[id] > 0);
             };
 
-            // 1. ตรวจสอบและจับคู่โปรโมชัน Bundle จากตาราง Bundles ตามลำดับ
-            bundles.forEach(b => {
-                const parsedBundle = parseBundleRow(b);
-                const bundleItems = parsedBundle.items;
-                if (!bundleItems || bundleItems.length < 2) return;
+            // 1. ตรวจสอบและจับคู่โปรโมชัน Bundle (ข้ามเมื่อใช้โค้ด FRIENDZONE)
+            if (activePromoCode !== 'friendzone') {
+                bundles.forEach(b => {
+                    const parsedBundle = parseBundleRow(b);
+                    const bundleItems = parsedBundle.items;
+                    if (!bundleItems || bundleItems.length < 2) return;
 
-                if (bundleItems.some(bi => isOldPatientMap[bi.id])) {
-                    return;
-                }
-
-                const hasEnough = bundleItems.every(bi => (remainingQty[bi.id] || 0) >= bi.qty && bi.qty > 0);
-
-                if (hasEnough) {
-                    const sets = Math.min(...bundleItems.map(bi => Math.floor((remainingQty[bi.id] || 0) / bi.qty)));
-
-                    if (sets > 0) {
-                        bundleItems.forEach(bi => {
-                            remainingQty[bi.id] -= sets * bi.qty;
-                            lockedBundleCost[bi.id] += sets * bi.bundlePrice;
-                        });
-
-                        appliedBundles.push(sets > 1 ? `${parsedBundle.bundleName} (x${sets} เซ็ต)` : parsedBundle.bundleName);
+                    if (bundleItems.some(bi => isOldPatientMap[bi.id])) {
+                        return;
                     }
-                }
-            });
+
+                    const hasEnough = bundleItems.every(bi => (remainingQty[bi.id] || 0) >= bi.qty && bi.qty > 0);
+
+                    if (hasEnough) {
+                        const sets = Math.min(...bundleItems.map(bi => Math.floor((remainingQty[bi.id] || 0) / bi.qty)));
+
+                        if (sets > 0) {
+                            bundleItems.forEach(bi => {
+                                remainingQty[bi.id] -= sets * bi.qty;
+                                lockedBundleCost[bi.id] += sets * bi.bundlePrice;
+                            });
+
+                            appliedBundles.push(sets > 1 ? `${parsedBundle.bundleName} (x${sets} เซ็ต)` : parsedBundle.bundleName);
+                        }
+                    }
+                });
+            }
 
             // 2. คำนวณราคาส่วนที่เหลือจาก Bundle และรวมยอดทั้งหมด
             Object.keys(cart).forEach(id => {
@@ -501,7 +564,7 @@
 
                 if (tierResult.note) notes.push(tierResult.note);
 
-                if ((id === 'iv-white' || id === 'iv-signature') && hasOtherProcedures(id)) {
+                if (activePromoCode !== 'friendzone' && (id === 'iv-white' || id === 'iv-signature') && hasOtherProcedures(id)) {
                     finalItemPrice *= 0.85;
                     notes.push('ลด 15% เมื่อทำคู่หัตถการอื่น');
                 }
@@ -687,9 +750,13 @@
                     const isOld = isOldPatientMap[item.id] || false;
                     const step = item.step || 1;
                     const calcItem = calculatedItemsMap[item.id];
+                    const isFriendActive = activePromoCode === 'friendzone' && item.friendZonePrice > 0;
+                    const displayStartPrice = isFriendActive 
+                        ? Math.round(item.friendZonePrice * (item.basePrice > 0 ? (item.startPriceLabel / item.basePrice) : 1))
+                        : item.startPriceLabel;
 
                     return `
-                        <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-muji-200 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5">
+                        <div class="bg-white rounded-2xl p-3.5 sm:p-4 border ${isFriendActive ? 'border-amber-300 ring-1 ring-amber-200/50' : 'border-muji-200'} shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5">
                             <!-- Left: Thumbnail & Details -->
                             <div class="flex items-start sm:items-center gap-3.5 flex-grow min-w-0">
                                 <div class="relative overflow-hidden rounded-xl bg-muji-50 w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 border border-muji-100">
@@ -698,10 +765,13 @@
                                 </div>
                                 
                                 <div class="space-y-1 flex-grow min-w-0">
-                                    <h4 class="font-bold text-muji-dark text-sm md:text-base leading-snug">${item.name}</h4>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h4 class="font-bold text-muji-dark text-sm md:text-base leading-snug">${item.name}</h4>
+                                        ${isFriendActive ? `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300">FRIENDZONE</span>` : ''}
+                                    </div>
                                     <p class="text-xs text-muji-500 leading-relaxed">${item.description}</p>
                                     
-                                    ${item.hasOldPatient ? `
+                                    ${item.hasOldPatient && activePromoCode !== 'friendzone' ? `
                                         <div class="pt-1">
                                             <label class="inline-flex items-center cursor-pointer text-xs text-muji-matchaDark font-medium bg-muji-matchaLight/70 px-2.5 py-1 rounded-lg">
                                                 <input type="checkbox" onchange="toggleOldPatient('${item.id}')" ${isOld ? 'checked' : ''} class="rounded border-muji-300 text-muji-matcha focus:ring-muji-matcha mr-1.5 flex-shrink-0">
@@ -724,8 +794,13 @@
                                             <p class="text-sm font-bold text-muji-matcha">${calcItem.finalPrice.toLocaleString()} ฿</p>
                                         </div>
                                     ` : `
-                                        <span class="text-[11px] text-muji-400 font-medium block">ราคาเริ่มต้น:</span>
-                                        <p class="text-xs sm:text-sm font-bold text-muji-matcha">${item.startPriceLabel.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQtyLabel}</span></p>
+                                        <span class="text-[11px] text-muji-400 font-medium block">${isFriendActive ? 'ราคาเพื่อนเริ่มต้น:' : 'ราคาเริ่มต้น:'}</span>
+                                        <div class="flex items-baseline sm:justify-end gap-1.5">
+                                            ${isFriendActive && displayStartPrice < item.startPriceLabel ? `
+                                                <span class="text-[11px] text-muji-400 line-through">${item.startPriceLabel.toLocaleString()} ฿</span>
+                                            ` : ''}
+                                            <p class="text-xs sm:text-sm font-bold text-muji-matcha">${displayStartPrice.toLocaleString()} ฿ <span class="text-[10px] text-muji-400 font-normal">/ ${item.baseQtyLabel}</span></p>
+                                        </div>
                                     `}
                                 </div>
 
@@ -834,6 +909,14 @@
 
             const now = new Date();
             document.getElementById('cardDate').innerText = `วันที่: ${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.`;
+
+            const cardPromoBadge = document.getElementById('cardPromoBadge');
+            if (activePromoCode === 'friendzone') {
+                document.getElementById('cardPromoName').innerText = 'FRIENDZONE';
+                cardPromoBadge.classList.remove('hidden');
+            } else {
+                cardPromoBadge.classList.add('hidden');
+            }
 
             if (appliedBundles.length > 0) {
                 cardBundlesList.innerHTML = appliedBundles.map(b => `<li>${b}</li>`).join('');
