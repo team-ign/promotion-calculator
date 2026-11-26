@@ -142,7 +142,7 @@
                 <!-- Search Input -->
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muji-400 text-sm"></i>
-                    <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="ค้นหาชื่อหัตถการ, หรือรายละเอียด..." class="w-full pl-10 pr-10 py-2.5 bg-white border border-muji-200 rounded-2xl text-sm text-muji-dark placeholder-muji-400 shadow-sm focus:outline-none focus:border-muji-matcha focus:ring-2 focus:ring-muji-matcha/20 transition-all">
+                    <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="ค้นหาชื่อหัตถการ หรือรายละเอียด..." class="w-full pl-10 pr-10 py-2.5 bg-white border border-muji-200 rounded-2xl text-sm text-muji-dark placeholder-muji-400 shadow-sm focus:outline-none focus:border-muji-matcha focus:ring-2 focus:ring-muji-matcha/20 transition-all">
                     <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3.5 top-1/2 -translate-y-1/2 text-muji-400 hover:text-muji-dark p-1 cursor-pointer">
                         <i class="fa-solid fa-circle-xmark text-sm"></i>
                     </button>
@@ -286,7 +286,7 @@
                 </div>
 
                 <div class="pt-2.5 text-center text-xs text-muji-400 border-t border-dashed border-muji-200 space-y-1">
-                    <p class="font-medium text-muji-dark">ส่งรูปภาพนี้ให้เจ้าหน้าที่เพื่อรับสิทธิ์ราคาพิเศษนี้</p>
+                    <p class="font-medium text-muji-dark">ส่งรูปภาพนี้ให้เจ้าหน้าที่เพื่อรับสิทธิ์ราคาพิเศษ</p>
                     <p class="text-muji-matcha font-semibold text-sm">LINE Official: @Team_IGN</p>
                 </div>
             </div>
@@ -656,7 +656,7 @@
 
             if (totalDiscount > previousDiscount) {
                 const latestBundle = appliedBundles.length > 0 ? appliedBundles[appliedBundles.length - 1] : '';
-                const shortReason = latestBundle ? latestBundle.split('(')[0].trim() : 'รับส่วนลดราคาพิเศษ!';
+                const shortReason = latestBundle ? latestBundle.split('(')[0].trim() : 'รับส่วนลดพิเศษ!';
                 triggerSavingsCelebration(totalDiscount, shortReason);
             }
             previousDiscount = totalDiscount;
@@ -829,20 +829,19 @@
                     return `
                         <div class="bg-white rounded-2xl p-4 border ${isPromoActive ? 'border-amber-300 ring-1 ring-amber-200/50' : 'border-muji-200'} shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-full">
                             <!-- Top: Compact Corner Thumbnail & Details -->
-                            <div class="space-y-2.5">
-                                <div class="flex items-start gap-3">
-                                    <div class="relative overflow-hidden rounded-xl bg-muji-50 w-14 h-14 flex-shrink-0 border border-muji-100">
-                                        <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/150x150/f5f0e6/3d3226?text=Clinic'">
+                            <div class="space-y-3">
+                                <div class="flex items-start gap-3.5">
+                                    <div class="relative overflow-hidden rounded-xl bg-muji-50 w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 border border-muji-100">
+                                        <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/200x200/f5f0e6/3d3226?text=Clinic'">
                                     </div>
                                     <div class="flex-grow min-w-0 space-y-1">
                                         <div class="flex items-center gap-1.5 flex-wrap">
                                             ${isPromoActive ? `<span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300 uppercase">${activePromoCode}</span>` : ''}
                                         </div>
                                         <h4 class="font-bold text-muji-dark text-sm md:text-base leading-snug">${item.name}</h4>
+                                        <p class="text-xs text-muji-500 leading-relaxed">${item.description}</p>
                                     </div>
                                 </div>
-                                
-                                <p class="text-xs text-muji-500 leading-relaxed">${item.description}</p>
 
                                 ${item.hasOldPatient && !activePromoCode ? `
                                     <div class="pt-1">
