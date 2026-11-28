@@ -158,7 +158,7 @@
             <div class="space-y-6" id="procedureCardsContainer">
                 <div class="text-center py-12 text-muji-400">
                     <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-muji-matcha"></i>
-                    <p class="text-sm">กำลังโหลดข้อมูลหัตถการ...</p>
+                    <p class="text-sm">กำลังโหลดข้อมูลหัตถการจาก Google Sheets...</p>
                 </div>
             </div>
         </section>
@@ -270,16 +270,8 @@
                     <ul id="cardBundlesList" class="list-disc list-inside space-y-0.5 text-xs"></ul>
                 </div>
 
-                <div class="border-t border-muji-200 pt-3 space-y-1.5 text-xs md:text-sm">
-                    <div class="flex justify-between text-muji-500">
-                        <span>ราคาปกติรวม</span>
-                        <span id="cardSubtotal">0 ฿</span>
-                    </div>
-                    <div class="flex justify-between text-muji-matchaDark font-medium">
-                        <span>ส่วนลดพิเศษ</span>
-                        <span id="cardDiscount">-0 ฿</span>
-                    </div>
-                    <div class="flex justify-between text-lg md:text-xl font-bold text-muji-matcha pt-2 border-t border-muji-200">
+                <div class="border-t border-muji-200 pt-3">
+                    <div class="flex justify-between text-lg md:text-xl font-bold text-muji-matcha">
                         <span>ราคารวมสุทธิ</span>
                         <span id="cardTotal">0 ฿</span>
                     </div>
@@ -382,22 +374,25 @@
             updateCartUI();
         }
 
-        // ฟังก์ชันโหลด CSV จาก Google Sheets
-        function fetchCsvData(url) {
-            return new Promise((resolve, reject) => {
-                if (!url || url.startsWith('วางลิงก์')) {
-                    reject(new Error('ยังไม่ได้ตั้งค่า URL ของ Google Sheets'));
-                    return;
-                }
-                const cacheBusterUrl = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
-                Papa.parse(cacheBusterUrl, {
-                    download: true,
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: results => resolve(results.data),
-                    error: err => reject(err)
-                });
+        // ฟังก์ชันโหลด CSV จาก Google Sheets (ใช้ fetch() เพื่อรองรับ Redirect ของ Google ได้เสถียรขึ้น)
+        async function fetchCsvData(url, tabName = '') {
+            if (!url || url.startsWith('วางลิงก์')) {
+                throw new Error(`ยังไม่ได้ตั้งค่า URL ของแท็บ ${tabName}`);
+            }
+            const cacheBusterUrl = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+            const response = await fetch(cacheBusterUrl);
+            if (!response.ok) {
+                throw new Error(`โหลดแท็บ ${tabName} ไม่สำเร็จ (HTTP ${response.status})`);
+            }
+            const csvText = await response.text();
+            if (csvText.trim().startsWith('<!DOCTYPE html>') || csvText.trim().startsWith('<html')) {
+                throw new Error(`ลิงก์แท็บ ${tabName} ส่งค่ากลับมาเป็นหน้าเว็บ (กรุณาตรวจสอบการ Publish to web เป็น CSV)`);
+            }
+            const parsed = Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true
             });
+            return parsed.data;
         }
 
         // Helper แปลงตัวเลขที่อาจติดลูกน้ำ
@@ -438,9 +433,9 @@
 
             try {
                 const [rawProducts, rawTiers, rawBundles] = await Promise.all([
-                    fetchCsvData(GOOGLE_SHEETS_CONFIG.productsCsvUrl),
-                    fetchCsvData(GOOGLE_SHEETS_CONFIG.tiersCsvUrl),
-                    fetchCsvData(GOOGLE_SHEETS_CONFIG.bundlesCsvUrl)
+                    fetchCsvData(GOOGLE_SHEETS_CONFIG.productsCsvUrl, 'Products'),
+                    fetchCsvData(GOOGLE_SHEETS_CONFIG.tiersCsvUrl, 'Tiers'),
+                    fetchCsvData(GOOGLE_SHEETS_CONFIG.bundlesCsvUrl, 'Bundles')
                 ]);
 
                 availablePromoCodes = new Set();
@@ -512,7 +507,8 @@
                     <div class="bg-white rounded-2xl p-8 border border-rose-200 text-center space-y-2">
                         <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-500"></i>
                         <h3 class="font-bold text-muji-dark">ไม่สามารถโหลดข้อมูลจาก Google Sheets ได้</h3>
-                        <p class="text-xs text-muji-500">กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต หรือการตั้งค่า Publish to web ของ Google Sheets</p>
+                        <p class="text-xs text-rose-600 font-medium">${error.message}</p>
+                        <p class="text-xs text-muji-500">กรุณาตรวจสอบการตั้งค่า File > Share > Publish to web (เลือกเป็น CSV) ใน Google Sheets</p>
                         <button onclick="initApp()" class="mt-3 px-4 py-2 bg-muji-matcha text-white rounded-xl text-xs font-medium hover:bg-muji-matchaDark cursor-pointer">
                             <i class="fa-solid fa-rotate-right mr-1"></i>ลองโหลดใหม่อีกครั้ง
                         </button>
@@ -969,17 +965,20 @@
             const cardBundlesBox = document.getElementById('cardBundlesBox');
             const cardBundlesList = document.getElementById('cardBundlesList');
 
-            const { items, subtotal, grandTotal, totalDiscount, appliedBundles } = calculateCartDetails();
+            const { items, grandTotal, appliedBundles } = calculateCartDetails();
 
-            cardItemsList.innerHTML = items.map(item => `
-                <div class="flex justify-between items-start text-muji-dark">
-                    <div>
-                        <p class="font-medium leading-snug text-xs md:text-sm">${item.name}</p>
-                        <p class="text-xs text-muji-500 font-medium">จำนวน: ${item.qty} ${item.unit}</p>
+            cardItemsList.innerHTML = items.map(item => {
+                const unitPrice = item.qty > 0 ? Math.round((item.finalPrice / item.qty) * 100) / 100 : 0;
+                return `
+                    <div class="flex justify-between items-start text-muji-dark">
+                        <div>
+                            <p class="font-medium leading-snug text-xs md:text-sm">${item.name}</p>
+                            <p class="text-xs text-muji-500 font-medium">จำนวน: ${item.qty} ${item.unit} (หน่วยละ ${unitPrice.toLocaleString()} ฿)</p>
+                        </div>
+                        <span class="font-bold text-xs md:text-sm">${item.finalPrice.toLocaleString()} ฿</span>
                     </div>
-                    <span class="font-bold text-xs md:text-sm">${item.finalPrice.toLocaleString()} ฿</span>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             const now = new Date();
             document.getElementById('cardDate').innerText = `วันที่: ${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.`;
@@ -999,8 +998,6 @@
                 cardBundlesBox.classList.add('hidden');
             }
 
-            document.getElementById('cardSubtotal').innerText = `${subtotal.toLocaleString()} ฿`;
-            document.getElementById('cardDiscount').innerText = `-${totalDiscount.toLocaleString()} ฿`;
             document.getElementById('cardTotal').innerText = `${grandTotal.toLocaleString()} ฿`;
 
             const modal = document.getElementById('summaryModal');
